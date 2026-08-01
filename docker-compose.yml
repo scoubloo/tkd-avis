@@ -1,0 +1,80 @@
+# =============================================================================
+#  Avis TKD — deux conteneurs isolés.
+#
+#  ⚠️ FRONTIÈRE AETERNA : aucun des quatre conteneurs protégés (n8n, traefik,
+#  litellm, postgres) n'est touché par ce fichier. `docker compose down` retire
+#  cette application et rien d'autre.
+# =============================================================================
+
+services:
+  tkd-avis-db:
+    image: postgres:16-alpine
+    container_name: tkd-avis-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: tkd
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?mot de passe de base manquant}
+      POSTGRES_DB: tkd_avis
+      # Rend les sauvegardes et les restaurations reproductibles.
+      LANG: fr_FR.utf8
+    volumes:
+      - ./donnees:/var/lib/postgresql/data
+    # ⚠️ Publié UNIQUEMENT sur la boucle locale du serveur.
+    # Sur 0.0.0.0, la base serait joignable depuis Internet — c'est exactement
+    # la faille qui a fait arrêter Redis le 01/08/2026. Le tunnel SSH suffit
+    # pour l'exploitation à distance.
+    # (5433 est déjà occupé sur ce serveur par un PostgreSQL natif, hors Docker.)
+    ports:
+      - '127.0.0.1:5434:5432'
+    networks:
+      - tkd-interne
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U tkd -d tkd_avis']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+
+  tkd-avis-app:
+    image: tkd-avis:${TKD_TAG:-current}
+    container_name: tkd-avis-app
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      tkd-avis-db:
+        condition: service_healthy
+    networks:
+      # `tkd-interne` pour parler à la base, `n8n_default` pour être vu de Traefik.
+      # La base, elle, n'est PAS sur n8n_default : elle n'a rien à y faire.
+      - tkd-interne
+      - n8n_default
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /app/.next/cache
+    labels:
+      - 'traefik.enable=true'
+      # ⚠️ INDISPENSABLE ici : ce conteneur est sur DEUX réseaux. Sans cette
+      # ligne, Traefik choisit une adresse au hasard entre les deux — et une
+      # requête sur deux part vers le réseau interne, où Traefik n'est pas
+      # branché. Symptôme observé : /api/health répond 200 pendant que la page
+      # d'accueil expire en 504, sur le même routeur.
+      - 'traefik.docker.network=n8n_default'
+      - 'traefik.http.routers.tkd-avis.rule=Host(`n8n.srv1314704.hstgr.cloud`) && PathPrefix(`/tkd-avis`)'
+      - 'traefik.http.routers.tkd-avis.entrypoints=web,websecure'
+      - 'traefik.http.routers.tkd-avis.tls=true'
+      - 'traefik.http.routers.tkd-avis.tls.certresolver=mytlschallenge'
+      # ⚠️ AUCUN middleware `stripprefix` : le sous-chemin est déjà géré par
+      # `basePath` dans next.config.ts. Le retirer deux fois casserait tout.
+      - 'traefik.http.services.tkd-avis.loadbalancer.server.port=3000'
+
+networks:
+  tkd-interne:
+    driver: bridge
+  n8n_default:
+    external: true

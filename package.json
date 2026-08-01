@@ -1,0 +1,42 @@
+{
+  "name": "tkd-avis",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Avis sur les cours de taekwondo — application web (inscription, confirmation e-mail, avis notés, back-office)",
+  "scripts": {
+    "dev": "next dev -p 3210",
+    "build": "next build",
+    "start": "node server.js",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "db:migrate": "node scripts/migrate.mjs",
+    "db:seed": "node scripts/seed.mjs",
+    "db:admin": "node scripts/set-admin.mjs",
+    "db:purge": "node scripts/purge.mjs",
+    "verify": "npm run typecheck && npm run test && npm run build"
+  },
+  "dependencies": {
+    "@node-rs/argon2": "^2.0.2",
+    "drizzle-orm": "^0.44.2",
+    "next": "^15.5.4",
+    "nodemailer": "^7.0.6",
+    "postgres": "^3.4.7",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "server-only": "^0.0.1",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.0",
+    "@types/node": "^22.15.0",
+    "@types/nodemailer": "^7.0.2",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

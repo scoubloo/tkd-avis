@@ -1,0 +1,17 @@
+node_modules/
+.next/
+out/
+dist/
+*.tsbuildinfo
+next-env.d.ts
+
+# Secrets : jamais dans le dépôt. Le fichier réel vit dans INFRA/.secrets/
+.env
+.env.local
+.env.production
+
+# Sorties de test
+test-results/
+playwright-report/
+blob-report/
+coverage/
