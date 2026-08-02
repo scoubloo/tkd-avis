@@ -1,0 +1,82 @@
+# =============================================================================
+#  Installation LOCALE — tout ce qu'il faut pour faire tourner le projet sur une
+#  machine neuve, sans rien installer d'autre que Docker.
+#
+#  ⚠️ Ce fichier n'est PAS celui de la production (`docker-compose.yml`). Il ne
+#  parle à aucun Traefik, n'ouvre aucun port sur l'extérieur, et sa base vit
+#  dans un volume Docker jetable — pas dans le dossier du projet.
+#
+#  La base de données est EMBARQUÉE. Il n'y a donc rien à installer côté
+#  moteur : ni PostgreSQL, ni MariaDB, ni MySQL. Ce que la machine hôte a
+#  d'installé n'a aucune importance.
+#
+#  Lancement : ./demarrer.sh   (ou  npm run local)
+# =============================================================================
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: tkd-local-db
+    environment:
+      POSTGRES_USER: tkd
+      POSTGRES_PASSWORD: local
+      POSTGRES_DB: tkd_avis
+    volumes:
+      - donnees-locales:/var/lib/postgresql/data
+    # Aucun port publié : seuls les autres conteneurs y accèdent. Ça évite aussi
+    # de tomber sur le 5432 d'un PostgreSQL déjà installé sur la machine.
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U tkd -d tkd_avis']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  # Boîte aux lettres locale : l'inscription envoie un VRAI e-mail, qui arrive
+  # ici au lieu de partir sur Internet. Sans elle, la confirmation d'adresse —
+  # une ligne du cahier des charges — ne serait pas testable hors ligne.
+  mail:
+    image: axllent/mailpit:latest
+    container_name: tkd-local-mail
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+    ports:
+      - '8025:8025'
+
+  app:
+    build:
+      context: .
+    container_name: tkd-local-app
+    environment:
+      DATABASE_URL: postgres://tkd:local@db:5432/tkd_avis
+      PUBLIC_URL: http://localhost:3000/tkd-avis
+      BASE_PATH: /tkd-avis
+      SMTP_HOST: mail
+      SMTP_PORT: 1025
+      SMTP_USER: local
+      SMTP_PASSWORD: local
+      SMTP_FROM: Avis TKD (local) <avis-tkd@localhost>
+      NODE_ENV: production
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - '3000:3000'
+    # Tout se fait ici, dans l'ordre, à chaque démarrage — et tout est
+    # idempotent : relancer ne duplique rien.
+    #   1. le schéma        2. le catalogue des cours
+    #   3. cinq comptes de démonstration, déjà confirmés
+    #   4. l'un d'eux passe administrateur, pour que le back-office soit
+    #      visitable sans aller chercher une commande dans un README
+    command:
+      - sh
+      - -c
+      - |
+        node scripts/migrate.mjs &&
+        node scripts/seed.mjs &&
+        MDP_DEMO=demo1234 node scripts/donnees-demo.mjs &&
+        node scripts/set-admin.mjs camille@exemple.fr &&
+        exec node server.js
+
+volumes:
+  donnees-locales:

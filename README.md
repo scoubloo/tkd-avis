@@ -10,6 +10,50 @@ Un back-office permet de suivre les utilisateurs et les cours.
 > e-mail en `@exemple.fr` appartiennent à un domaine réservé par la RFC 2606 :
 > aucun message ne peut partir vers une vraie personne.
 
+## Installation — une commande
+
+```bash
+./demarrer.sh
+```
+
+C'est tout. Rien à installer, rien à configurer, aucun fichier à remplir.
+
+**La base de données est embarquée.** Ce que la machine a comme moteur installé
+— PostgreSQL, MariaDB, MySQL, ou rien du tout — n'a aucune importance : le
+projet apporte le sien et ne touche à rien sur la machine hôte. Seul **Docker**
+est nécessaire ; si le démon n'est pas lancé, la commande le dit et s'arrête au
+lieu d'échouer en route.
+
+Au premier lancement, la commande construit l'image, crée le schéma, charge le
+catalogue et cinq comptes déjà confirmés, puis attend que la page réponde
+vraiment avant de se déclarer prête — « le conteneur a démarré » n'est pas
+« l'application répond ».
+
+| | |
+|---|---|
+| Le site | http://localhost:3000/tkd-avis |
+| Les e-mails | http://localhost:8025 |
+
+**Les e-mails partent pour de vrai**, mais vers une boîte locale au lieu
+d'Internet : l'inscription et la confirmation d'adresse se testent hors ligne,
+et le lien reçu pointe bien vers `localhost`. Sans cette boîte, une ligne du
+cahier des charges ne serait pas vérifiable sur une machine neuve.
+
+| Compte | Rôle | Mot de passe |
+|---|---|---|
+| `camille@exemple.fr` | **administrateur** | `demo1234` |
+| `yanis@`, `nadia@`, `thomas@`, `lea@exemple.fr` | membres | `demo1234` |
+
+Ce mot de passe n'existe **que** dans cette installation locale : en production
+il est tiré au hasard et n'est écrit nulle part dans le dépôt.
+
+```bash
+./demarrer.sh --arreter   # arrêter, en gardant les données
+./demarrer.sh --effacer   # arrêter et repartir d'une base neuve
+```
+
+---
+
 ## Ce dépôt est une extraction, et il a été nettoyé avant publication
 
 Le projet a d'abord vécu dans un dépôt privé plus large. Il en a été extrait avec
@@ -107,11 +151,19 @@ src/app/            les écrans
 tests/unit/         logique pure : mots de passe, jetons, moyennes, validation
 tests/e2e/          parcours réels dans un navigateur
 hors-perimetre/     du code qui marche, volontairement débranché (voir son README)
+
+demarrer.sh                installation locale en une commande
+docker-compose.local.yml    ce qu'elle démarre : base + boîte aux lettres + app
+docker-compose.yml          la production — ne pas confondre avec le précédent
 ```
 
 ---
 
-## Faire tourner le projet
+## Travailler sur le projet sans Docker
+
+Pour développer, si on préfère lancer le serveur à la main. Demande une base
+PostgreSQL joignable et un SMTP — c'est précisément ce que `./demarrer.sh`
+évite d'avoir à installer.
 
 ```bash
 npm install

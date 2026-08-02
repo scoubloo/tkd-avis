@@ -4,6 +4,7 @@
   "private": true,
   "description": "Avis sur les cours de taekwondo — application web (inscription, confirmation e-mail, avis notés, back-office)",
   "scripts": {
+    "local": "./demarrer.sh",
     "dev": "next dev -p 3210",
     "build": "next build",
     "start": "node server.js",
