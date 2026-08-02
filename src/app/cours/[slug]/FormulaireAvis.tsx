@@ -21,11 +21,24 @@ export function FormulaireAvis({
   avisExistant: { note: number; commentaire: string } | null;
 }) {
   const [etat, action, enCours] = useActionState(deposerAvis, ETAT_INITIAL);
+  // ⚠️ L'état de la SUPPRESSION vit ici, dans le composant parent, et pas dans
+  // le formulaire de suppression lui-même.
+  //
+  // Défaut trouvé par les tests : ce formulaire n'existe que si un avis existe.
+  // Une fois l'avis supprimé, il était démonté — emportant avec lui le message
+  // « Votre avis a été supprimé ». L'utilisateur cliquait, tout disparaissait,
+  // et rien ne lui confirmait que son geste avait abouti.
+  const [etatSuppression, actionSuppression, suppressionEnCours] = useActionState(
+    supprimerAvis,
+    ETAT_INITIAL,
+  );
   const [note, setNote] = useState(avisExistant?.note ?? 0);
   const [longueur, setLongueur] = useState(avisExistant?.commentaire.length ?? 0);
 
   return (
     <>
+      <Message etat={etatSuppression} />
+
       <form action={action} noValidate id="formulaire-avis">
       <input type="hidden" name="coursId" value={coursId} />
       <Message etat={etat} />
@@ -106,29 +119,14 @@ export function FormulaireAvis({
         </BoutonEnvoi>
       </form>
 
-      {avisExistant && <FormulaireSuppression coursId={coursId} />}
+      {avisExistant && (
+        <form action={actionSuppression} style={{ marginTop: '1rem' }}>
+          <input type="hidden" name="coursId" value={coursId} />
+          <button type="submit" className="bouton bouton--danger" disabled={suppressionEnCours}>
+            {suppressionEnCours ? 'Suppression…' : 'Supprimer mon avis'}
+          </button>
+        </form>
+      )}
     </>
-  );
-}
-
-/**
- * Formulaire SÉPARÉ, frère du précédent — un `<form>` ne peut pas en contenir
- * un autre : le navigateur supprime le formulaire imbriqué au moment de
- * l'analyse du HTML, et le bouton devient inerte sans le moindre message.
- *
- * Deux formulaires distincts évitent aussi qu'un « supprimer » et un
- * « enregistrer » partagent le même envoi.
- */
-function FormulaireSuppression({ coursId }: { coursId: string }) {
-  const [etat, action, enCours] = useActionState(supprimerAvis, ETAT_INITIAL);
-
-  return (
-    <form action={action} style={{ marginTop: '1rem' }}>
-      <input type="hidden" name="coursId" value={coursId} />
-      <Message etat={etat} />
-      <button type="submit" className="bouton bouton--danger" disabled={enCours}>
-        {enCours ? 'Suppression…' : 'Supprimer mon avis'}
-      </button>
-    </form>
   );
 }

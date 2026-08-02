@@ -46,7 +46,7 @@ test.describe('parcours complet', () => {
 
     // --- Dépôt d'un avis ---
     await page.goto('cours/baby-tkd-mercredi');
-    await page.getByRole('radio', { name: '5 sur 5' }).check();
+    await page.locator('input[name=\"note\"][value=\"5\"]').check();
     // `#commentaire` et non getByLabel('Votre avis') : ce libellé désigne AUSSI
     // le titre de la section, et Playwright refuse (à juste titre) un sélecteur
     // qui vise deux éléments.
@@ -61,7 +61,7 @@ test.describe('parcours complet', () => {
     await expect(page.locator('.etiquette', { hasText: 'votre avis' })).toBeVisible();
 
     // --- Modification : un seul avis, pas un second ---
-    await page.getByRole('radio', { name: '3 sur 5' }).check();
+    await page.locator('input[name=\"note\"][value=\"3\"]').check();
     await page.getByRole('button', { name: 'Modifier mon avis' }).click();
     await expect(page.getByText('Votre avis est enregistré')).toBeVisible();
     await expect(page.getByRole('heading', { name: '1 avis' })).toBeVisible();
@@ -76,15 +76,21 @@ test.describe('parcours complet', () => {
     await creerCompteConfirme(page, email);
 
     await page.goto('cours/renforcement-samedi');
-    await page.getByRole('radio', { name: '4 sur 5' }).check();
+    await page.locator('input[name=\"note\"][value=\"4\"]').check();
     await page.locator('#commentaire').fill('Bon complément, bien dosé, on sort détendu.');
     await page.getByRole('button', { name: 'Publier mon avis' }).click();
     await expect(page.getByText('Votre avis est enregistré')).toBeVisible();
 
     // Droit d'accès et de portabilité : un fichier, en un clic.
-    const reponse = await page.request.get('/tkd-avis/api/mes-donnees');
-    expect(reponse.status()).toBe(200);
-    const donnees = await reponse.json();
+    // La requête part DEPUIS la page, pas depuis un contexte de requête séparé :
+    // c'est la seule façon d'être certain qu'elle emporte le cookie de session
+    // exactement comme le ferait le navigateur d'un visiteur.
+    const brut = await page.evaluate(async () => {
+      const r = await fetch('/tkd-avis/api/mes-donnees');
+      return { statut: r.status, corps: await r.text() };
+    });
+    expect(brut.statut).toBe(200);
+    const donnees = JSON.parse(brut.corps);
     expect(donnees.compte.email).toBe(email);
     expect(donnees.avis).toHaveLength(1);
     expect(JSON.stringify(donnees)).not.toContain(MOT_DE_PASSE);

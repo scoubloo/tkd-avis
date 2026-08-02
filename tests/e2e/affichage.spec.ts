@@ -1,5 +1,11 @@
 import { expect, test } from '@playwright/test';
-import { sansDebordementHorizontal } from './aide';
+import {
+  adresseUnique,
+  creerCompteConfirme,
+  sansDebordementHorizontal,
+  viderBoite,
+  viderCompteurs,
+} from './aide';
 
 const PAGES_PUBLIQUES = [
   '',
@@ -59,6 +65,27 @@ test.describe('affichage', () => {
       titres.add(titre);
     }
     expect(titres.size, 'des pages partagent le même titre').toBe(PAGES_PUBLIQUES.length);
+  });
+
+  test('les boutons de note sont annoncés en toutes lettres', async ({ page }) => {
+    // Le formulaire n'existe que pour un membre confirmé : le test crée donc un
+    // compte. Une version précédente se contentait de s'IGNORER quand le
+    // formulaire était absent — c'est-à-dire toujours, puisqu'elle visitait la
+    // page sans être connectée. Un test qui s'ignore ne prouve rien.
+    await viderBoite();
+    await viderCompteurs();
+    await creerCompteConfirme(page, adresseUnique('a11y'));
+    await page.goto('cours/poomsae-vendredi');
+
+    // Le chiffre visible porte aria-hidden : ce qui est annoncé, c'est le texte
+    // réservé aux lecteurs d'écran. Sans lui, une personne non voyante entend
+    // « 1, 2, 3, 4, 5 » sans savoir de quoi il s'agit.
+    await expect(page.locator('input[name="note"]')).toHaveCount(5);
+    for (const valeur of [1, 3, 5]) {
+      await expect(
+        page.locator(`input[name="note"][value="${valeur}"] ~ .sr-only`),
+      ).toHaveText(new RegExp(`^${valeur} sur 5`));
+    }
   });
 
   test('une page inexistante répond 404 avec un écran lisible', async ({ page }) => {

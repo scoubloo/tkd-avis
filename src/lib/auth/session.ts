@@ -3,7 +3,7 @@ import { and, eq, gt } from 'drizzle-orm';
 import { db } from '@/db';
 import { sessions, users, type Utilisateur } from '@/db/schema';
 import { creerJeton, dansMs, empreinte, DUREE_SESSION_MS } from './tokens';
-import { estProduction } from '@/lib/env';
+import { env } from '@/lib/env';
 
 /**
  * Le cookie est limité au sous-chemin de l'application.
@@ -14,7 +14,26 @@ import { estProduction } from '@/lib/env';
  * empêche son envoi depuis un site tiers, et `Secure` sa circulation en clair.
  */
 const CHEMIN = process.env.BASE_PATH ?? '/tkd-avis';
-const NOM_COOKIE = estProduction() ? '__Secure-tkd_session' : 'tkd_session';
+
+/**
+ * Le drapeau `Secure` et le préfixe `__Secure-` suivent le SCHÉMA de l'adresse
+ * publique, pas la variable `NODE_ENV`.
+ *
+ * C'est plus juste, et ça se voit à l'usage : sur une construction de
+ * production servie en HTTP pour les tests, `NODE_ENV` vaut « production »,
+ * donc le cookie était marqué `Secure` avec le préfixe `__Secure-` — et Safari
+ * le REFUSE (Chrome, lui, l'accepte sur 127.0.0.1). La session disparaissait
+ * d'une page à l'autre, uniquement sur ce navigateur, uniquement en test.
+ *
+ * En production réelle l'adresse est en https : le comportement est inchangé.
+ */
+function surHttps(): boolean {
+  return env().PUBLIC_URL.startsWith('https://');
+}
+
+function nomCookie(): string {
+  return surHttps() ? '__Secure-tkd_session' : 'tkd_session';
+}
 
 export async function creerSession(userId: string): Promise<void> {
   const jeton = creerJeton();
@@ -26,10 +45,10 @@ export async function creerSession(userId: string): Promise<void> {
     expiresAt: expiration,
   });
 
-  (await cookies()).set(NOM_COOKIE, jeton, {
+  (await cookies()).set(nomCookie(), jeton, {
     httpOnly: true,
     sameSite: 'lax',
-    secure: estProduction(),
+    secure: surHttps(),
     path: CHEMIN,
     expires: expiration,
   });
@@ -43,7 +62,7 @@ export async function creerSession(userId: string): Promise<void> {
  * des sessions périmées est le travail de `scripts/purge.mjs`.
  */
 export async function lireSession(): Promise<Utilisateur | null> {
-  const jeton = (await cookies()).get(NOM_COOKIE)?.value;
+  const jeton = (await cookies()).get(nomCookie())?.value;
   if (!jeton) return null;
 
   const lignes = await db
@@ -58,7 +77,7 @@ export async function lireSession(): Promise<Utilisateur | null> {
 
 export async function detruireSession(): Promise<void> {
   const magasin = await cookies();
-  const jeton = magasin.get(NOM_COOKIE)?.value;
+  const jeton = magasin.get(nomCookie())?.value;
 
   if (jeton) {
     // La session est retirée de la base : effacer le cookie seul laisserait un
@@ -66,7 +85,7 @@ export async function detruireSession(): Promise<void> {
     await db.delete(sessions).where(eq(sessions.tokenHash, empreinte(jeton)));
   }
 
-  magasin.set(NOM_COOKIE, '', { path: CHEMIN, maxAge: 0 });
+  magasin.set(nomCookie(), '', { path: CHEMIN, maxAge: 0 });
 }
 
 /** Invalide toutes les sessions d'un compte (changement de mot de passe). */
