@@ -55,17 +55,35 @@ export function accord(n: number, singulier: string, pluriel = `${singulier}s`):
   return n <= 1 ? singulier : pluriel;
 }
 
+/**
+ * ⚠️ Le fuseau est imposé, il n'est pas hérité de la machine.
+ *
+ * Le serveur tourne en UTC : sans cette précision, un avis déposé à 1 h du
+ * matin heure de Paris s'affichait daté de la VEILLE. Le défaut n'apparaît
+ * qu'entre minuit et 2 h — donc jamais pendant qu'on développe, et toujours
+ * chez l'utilisateur.
+ */
 export function dateLisible(date: Date): string {
-  return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+  return date.toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'Europe/Paris',
+  });
 }
 
 /**
- * Masque partiellement une adresse e-mail pour l'affichage public.
- * « marie.dupont@exemple.fr » → « m•••••••••t@exemple.fr »
+ * Étiquette publique de l'auteur d'un avis.
+ *
+ * ⚠️ Une version précédente affichait l'adresse partiellement masquée
+ * (« m•••••••t@exemple.fr »). C'était la mauvaise réponse à la bonne question :
+ * le masque conservait la première lettre, la dernière et le DOMAINE ENTIER,
+ * ce qui reste ré-identifiant sur une petite base — et surtout, rien dans le
+ * service n'exige d'afficher une adresse.
+ *
+ * Le principe de minimisation ne demande pas de mieux masquer une donnée
+ * inutile : il demande de ne pas la publier.
  */
-export function emailMasque(email: string): string {
-  const [local, domaine] = email.split('@');
-  if (!local || !domaine) return '—';
-  if (local.length <= 2) return `${local[0]}•@${domaine}`;
-  return `${local[0]}${'•'.repeat(Math.min(local.length - 2, 10))}${local.at(-1)}@${domaine}`;
+export function auteurPublic(): string {
+  return 'Membre';
 }

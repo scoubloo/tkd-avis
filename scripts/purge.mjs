@@ -10,7 +10,7 @@
  *   - comptes jamais confirmés au bout de 7 jours → supprimés (avec leurs jetons) ;
  *   - sessions expirées → supprimées ;
  *   - jetons e-mail expirés ou consommés depuis plus de 7 jours → supprimés ;
- *   - compteurs anti-abus périmés → supprimés.
+ *   - compteurs anti-abus périmés → supprimés (sans sursis).
  */
 import postgres from 'postgres';
 
@@ -41,8 +41,12 @@ try {
     RETURNING token_hash
   `;
 
+  // Sans sursis : une fenêtre échue est effacée au premier passage.
+  // Avec l'ancien « - interval '1 hour' », la durée de vie réelle atteignait
+  // DEUX heures alors que la page « Données personnelles » en annonce une.
+  // Corriger le script plutôt que la promesse.
   const compteurs = await sql`
-    DELETE FROM rate_limits WHERE fenetre_fin < now() - interval '1 hour' RETURNING cle
+    DELETE FROM rate_limits WHERE fenetre_fin < now() RETURNING cle
   `;
 
   console.log(

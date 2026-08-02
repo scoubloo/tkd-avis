@@ -25,6 +25,10 @@ const nextConfig: NextConfig = {
         source: '/:path*',
         headers: [
           { key: 'X-Content-Type-Options', value: 'nosniff' },
+          // Deux ans, SANS `includeSubDomains` : cet hôte sert aussi sept
+          // autres démonstrations, et étendre la contrainte à des
+          // sous-domaines qu'on ne maîtrise pas peut les rendre injoignables.
+          { key: 'Strict-Transport-Security', value: 'max-age=63072000' },
           { key: 'X-Frame-Options', value: 'DENY' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), interest-cohort=()' },

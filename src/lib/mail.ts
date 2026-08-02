@@ -14,9 +14,31 @@ import { env } from './env';
  */
 const global = globalThis as unknown as { __tkdMail?: Transporter };
 
+/**
+ * Mode « capture », pour les tests de bout en bout uniquement.
+ *
+ * Les jetons de confirmation ne sont stockés que sous forme d'empreinte : un
+ * test ne peut donc PAS reconstruire le lien depuis la base — c'est la
+ * contrepartie normale d'un stockage correct. Il faut donc lire le message.
+ *
+ * ⚠️ Double verrou : il faut `SMTP_HOST=capture` **et** un environnement qui
+ * n'est pas la production. Même mal configuré, un serveur de production ne peut
+ * pas basculer silencieusement dans un mode où les e-mails ne partent plus.
+ */
+function captureActive(): boolean {
+  return env().SMTP_HOST === 'capture' && process.env.NODE_ENV !== 'production';
+}
+
 function transporteur(): Transporter {
   if (!global.__tkdMail) {
     const c = env();
+
+    if (captureActive()) {
+      console.warn('[mail] MODE CAPTURE — aucun e-mail ne part réellement.');
+      global.__tkdMail = nodemailer.createTransport({ jsonTransport: true });
+      return global.__tkdMail;
+    }
+
     global.__tkdMail = nodemailer.createTransport({
       host: c.SMTP_HOST,
       port: c.SMTP_PORT,
@@ -45,13 +67,29 @@ async function envoyer(
       text: texte,
       html,
     });
+
+    if (captureActive()) {
+      // Le message complet est déposé dans un fichier que les tests lisent
+      // pour en extraire le lien de confirmation.
+      const { appendFile } = await import('node:fs/promises');
+      const fichier = process.env.CAPTURE_MAIL_FICHIER ?? '/tmp/tkd-avis-mails.jsonl';
+      await appendFile(fichier, `${JSON.stringify({ destinataire, sujet, texte })}\n`);
+      console.info(`[mail] capturé dans ${fichier} — sujet="${sujet}"`);
+      return { envoye: true };
+    }
+
     console.info(`[mail] envoyé — sujet="${sujet}" id=${info.messageId}`);
     return { envoye: true };
   } catch (erreur) {
     const raison = erreur instanceof Error ? erreur.message : String(erreur);
-    // Le destinataire n'est pas journalisé : c'est une donnée personnelle et le
-    // sujet suffit à diagnostiquer.
-    console.error(`[mail] ÉCHEC — sujet="${sujet}" cause=${raison}`);
+    // ⚠️ Le message brut du serveur SMTP est journalisé sous forme de CODE
+    // seulement. Un refus Gmail ressemble à « 550 5.1.1 <victime@exemple.fr>
+    // The email account that you tried to reach does not exist » : journaliser
+    // `raison` telle quelle écrivait donc l'adresse du destinataire dans les
+    // journaux, alors que le commentaire d'à côté affirmait le contraire.
+    const code = /\b([245]\d{2})\b/.exec(raison)?.[1] ?? 'inconnu';
+    const type = erreur instanceof Error ? erreur.name : 'Erreur';
+    console.error(`[mail] ÉCHEC — sujet="${sujet}" type=${type} code=${code}`);
     return { envoye: false, raison };
   }
 }

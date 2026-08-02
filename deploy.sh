@@ -15,7 +15,7 @@ set -Eeuo pipefail
 
 VPS_HOTE="${VPS_HOTE:?exporter VPS_HOTE=utilisateur@adresse-du-serveur}"
 VPS_CLE="INFRA/.secrets/ssh/aeterna_v2_ed25519"
-DISTANT="/docker/tkd-avis"
+DISTANT="/srv/tkd-avis"
 URL_PUBLIQUE="https://n8n.srv1314704.hstgr.cloud/tkd-avis"
 PROTEGES="n8n-n8n-1 n8n-traefik-1 aeterna-litellm aeterna-postgres"
 
@@ -25,9 +25,17 @@ ETIQUETTE="$(git rev-parse --short HEAD 2>/dev/null || echo manuel)"
 
 ssh_vps() { ssh -i "$RACINE_DEPOT/$VPS_CLE" -o ConnectTimeout=15 "$VPS_HOTE" "$@"; }
 
+# On compare l'IDENTITÉ des conteneurs (leur identifiant), pas leur durée de
+# fonctionnement : ce qui est interdit, c'est de RECRÉER un conteneur protégé.
+# La version précédente comparait « Up 9 days » et tombait en échec quand la
+# garde `traefik-autoheal` du serveur redémarrait Traefik pour une raison qui ne
+# nous regarde pas — un faux échec qui aurait fini par être ignoré.
 echo "▸ Empreinte des conteneurs protégés (avant)"
-AVANT="$(ssh_vps "docker ps --format '{{.Names}} {{.Status}}' | grep -E '$(echo $PROTEGES | tr ' ' '|')' | sort")"
-echo "$AVANT" | sed 's/^/    /'
+AVANT="$(ssh_vps "docker ps --format '{{.ID}} {{.Names}}' | grep -E '$(echo $PROTEGES | tr ' ' '|')' | sort")"
+# L'instant de démarrage, pas la durée : « Up 6 minutes » devient « Up 7 minutes »
+# pendant le déploiement lui-même, et l'avertissement aurait tiré à chaque fois.
+AVANT_DEPART="$(ssh_vps "docker inspect --format '{{.Name}} {{.State.StartedAt}}' $PROTEGES | sort")"
+ssh_vps "docker ps --format '{{.Names}} {{.Status}}' | grep -E '$(echo $PROTEGES | tr ' ' '|')' | sort" | sed 's/^/    /'
 
 echo "▸ Envoi des sources (sans node_modules, sans .next, sans données)"
 # Le répertoire distant est VIDÉ d'abord (en gardant les données et la
@@ -48,7 +56,9 @@ scp -q -i "$RACINE_DEPOT/$VPS_CLE" "$RACINE_DEPOT/INFRA/.secrets/tkd-avis.env" "
 ssh_vps "chmod 600 $DISTANT/.env"
 
 echo "▸ Construction de l'image  tkd-avis:$ETIQUETTE"
-ssh_vps "cd $DISTANT && docker build -q -t tkd-avis:$ETIQUETTE -t tkd-avis:current . >/dev/null && echo '    image construite'"
+# `nice`/`ionice` : la construction ne doit pas faire passer Traefik pour figé
+# aux yeux de la garde du serveur — c'est arrivé deux fois le 02/08/2026.
+ssh_vps "cd $DISTANT && nice -n 19 ionice -c3 docker build -q -t tkd-avis:$ETIQUETTE -t tkd-avis:current . >/dev/null && echo '    image construite'"
 
 echo "▸ Démarrage des conteneurs"
 ssh_vps "cd $DISTANT && TKD_TAG=current docker compose up -d --remove-orphans"
@@ -122,13 +132,21 @@ case "$LOT_CSS" in
 esac
 
 echo "▸ Empreinte des conteneurs protégés (après)"
-APRES="$(ssh_vps "docker ps --format '{{.Names}} {{.Status}}' | grep -E '$(echo $PROTEGES | tr ' ' '|')' | sort")"
-echo "$APRES" | sed 's/^/    /'
+APRES="$(ssh_vps "docker ps --format '{{.ID}} {{.Names}}' | grep -E '$(echo $PROTEGES | tr ' ' '|')' | sort")"
+APRES_DEPART="$(ssh_vps "docker inspect --format '{{.Name}} {{.State.StartedAt}}' $PROTEGES | sort")"
+ssh_vps "docker ps --format '{{.Names}} {{.Status}}' | grep -E '$(echo $PROTEGES | tr ' ' '|')' | sort" | sed 's/^/    /'
 if [ "$AVANT" != "$APRES" ]; then
-  echo "✖ ATTENTION : l'état d'un conteneur protégé a changé pendant le déploiement."
+  echo "✖ ARRÊT : un conteneur protégé a été RECRÉÉ pendant le déploiement."
+  echo "  avant : $AVANT"
+  echo "  après : $APRES"
   exit 1
 fi
-echo "    inchangés"
+echo "    aucun conteneur protégé recréé"
+if [ "$AVANT_DEPART" != "$APRES_DEPART" ]; then
+  echo "  ⚠️ un conteneur protégé a REDÉMARRÉ (même identifiant) pendant le déploiement."
+  echo "     Cause la plus probable : la garde traefik-autoheal du serveur, dont la"
+  echo "     sonde expire quand la machine construit une image. Sans gravité, mais à savoir."
+fi
 
 echo
 echo "✔ Déployé — $URL_PUBLIQUE"

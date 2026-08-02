@@ -1,4 +1,19 @@
+import { createHash } from 'node:crypto';
 import { sql } from '@/db';
+
+/**
+ * La clé est CONDENSÉE avant d'entrer en base.
+ *
+ * Les appelants construisent des clés lisibles du genre
+ * `connexion:88.12.4.7:marie@exemple.fr` — ce qui mettait une adresse e-mail et
+ * une adresse IP en clair dans une table, sans que ce soit annoncé nulle part,
+ * et sans qu'un effacement de compte les emporte. Le compteur fonctionne
+ * exactement pareil sur une empreinte, et la donnée personnelle disparaît du
+ * schéma.
+ */
+function condenser(cle: string): string {
+  return createHash('sha256').update(cle).digest('hex');
+}
 
 /**
  * Limitation de débit à fenêtre fixe, stockée en base.
@@ -25,9 +40,16 @@ export const QUOTAS = {
 export type Resultat = { autorise: boolean; restant: number; secondesAvantReset: number };
 
 export async function consommer(cle: string, quota: Quota): Promise<Resultat> {
-  const lignes = await sql<{ compteur: number; fenetre_fin: Date }[]>`
+  const empreinte = condenser(cle);
+  // ⚠️ Le délai restant est calculé PAR PostgreSQL et rendu en entier.
+  // Première version : la colonne `fenetre_fin` était rapatriée telle quelle et
+  // `.getTime()` appelé dessus — le pilote la rendait en chaîne, et
+  // l'inscription tombait en erreur 500 au tout premier essai. Faire calculer
+  // la base supprime la dépendance à sa façon de convertir les dates, et
+  // supprime aussi tout écart d'horloge entre le serveur web et la base.
+  const lignes = await sql<{ compteur: number; secondes_restantes: number }[]>`
     INSERT INTO rate_limits (cle, compteur, fenetre_fin)
-    VALUES (${cle}, 1, now() + ${`${quota.fenetreMs} milliseconds`}::interval)
+    VALUES (${empreinte}, 1, now() + ${`${quota.fenetreMs} milliseconds`}::interval)
     ON CONFLICT (cle) DO UPDATE SET
       compteur = CASE
                    WHEN rate_limits.fenetre_fin < now() THEN 1
@@ -38,23 +60,26 @@ export async function consommer(cle: string, quota: Quota): Promise<Resultat> {
                         THEN now() + ${`${quota.fenetreMs} milliseconds`}::interval
                       ELSE rate_limits.fenetre_fin
                     END
-    RETURNING compteur, fenetre_fin
+    RETURNING compteur,
+              GREATEST(0, CEIL(EXTRACT(EPOCH FROM (fenetre_fin - now()))))::int
+                AS secondes_restantes
   `;
 
   const ligne = lignes[0];
+  // Une limitation de débit qui ne sait pas répondre laisse passer : elle
+  // protège du bourrinage, elle ne doit jamais bloquer un site entier.
   if (!ligne) return { autorise: true, restant: quota.limite - 1, secondesAvantReset: 0 };
 
-  const secondes = Math.max(0, Math.ceil((ligne.fenetre_fin.getTime() - Date.now()) / 1000));
   return {
     autorise: ligne.compteur <= quota.limite,
     restant: Math.max(0, quota.limite - ligne.compteur),
-    secondesAvantReset: secondes,
+    secondesAvantReset: ligne.secondes_restantes,
   };
 }
 
 /** Remet un compteur à zéro — après une connexion réussie, par exemple. */
 export async function liberer(cle: string): Promise<void> {
-  await sql`DELETE FROM rate_limits WHERE cle = ${cle}`;
+  await sql`DELETE FROM rate_limits WHERE cle = ${condenser(cle)}`;
 }
 
 export function delaiLisible(secondes: number): string {

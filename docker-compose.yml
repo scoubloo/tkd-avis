@@ -36,6 +36,11 @@ services:
       start_period: 10s
     security_opt:
       - no-new-privileges:true
+    # Le serveur porte les quatre conteneurs protégés et a déjà connu un
+    # étranglement CPU côté hébergeur : cette application ne doit jamais pouvoir
+    # l'emporter avec elle.
+    mem_limit: 512m
+    pids_limit: 200
 
   tkd-avis-app:
     image: tkd-avis:${TKD_TAG:-current}
@@ -53,6 +58,11 @@ services:
       - n8n_default
     security_opt:
       - no-new-privileges:true
+    # Un serveur web n'a besoin d'aucune capacité noyau particulière.
+    cap_drop:
+      - ALL
+    mem_limit: 512m
+    pids_limit: 200
     read_only: true
     tmpfs:
       - /tmp

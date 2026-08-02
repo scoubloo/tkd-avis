@@ -7,7 +7,7 @@ import {
   accord,
   dateLisible,
   dureeLisible,
-  emailMasque,
+  auteurPublic,
   heureLisible,
   moyenne,
   nomDuJour,
@@ -115,9 +115,10 @@ export default async function PageCours({ params }: { params: Promise<{ slug: st
                 <span className="compte-avis">{dateLisible(a.updatedAt)}</span>
               </div>
               <p style={{ margin: '.7rem 0 .4rem', whiteSpace: 'pre-wrap' }}>{a.commentaire}</p>
-              {/* L'adresse n'est jamais affichée en entier publiquement. */}
+              {/* Aucune adresse e-mail n'est publiée, même masquée : le service
+                  n'en a pas besoin pour fonctionner. */}
               <p className="compte-avis" style={{ margin: 0 }}>
-                {emailMasque(a.auteurEmail)}
+                {auteurPublic()}
               </p>
             </article>
           ))}

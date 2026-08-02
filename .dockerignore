@@ -1,0 +1,29 @@
+# Ce qui ne doit JAMAIS entrer dans le contexte de construction.
+#
+# ⚠️ `deploy.sh` construit l'image depuis /srv/tkd-avis, répertoire qui
+# contient aussi le fichier de configuration et les données vivantes de
+# PostgreSQL. Sans ce fichier, `COPY . .` les faisait entrer dans une couche
+# intermédiaire de l'image : elles y restaient après un `docker compose down`,
+# après une rotation des mots de passe, et voyageraient avec tout export.
+
+# Données vivantes de PostgreSQL (montées à côté)
+donnees/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Inutile à la construction
+node_modules/
+.next/
+.git/
+test-results/
+playwright-report/
+blob-report/
+coverage/
+*.log
+
+# Résidus macOS
+.DS_Store
+._*

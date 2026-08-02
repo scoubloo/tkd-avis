@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   accord,
   dureeLisible,
-  emailMasque,
+  auteurPublic,
   heureLisible,
   moyenne,
   nomDuJour,
@@ -67,19 +67,11 @@ describe('affichage', () => {
   });
 });
 
-describe('masquage des adresses', () => {
-  it("ne laisse jamais lire l'adresse complète", () => {
-    const masque = emailMasque('marie.dupont@exemple.fr');
-    expect(masque).not.toContain('marie.dupont');
-    expect(masque.startsWith('m')).toBe(true);
-    expect(masque.endsWith('@exemple.fr')).toBe(true);
-  });
-
-  it('gère les adresses très courtes sans tout révéler', () => {
-    expect(emailMasque('ab@exemple.fr')).toBe('a•@exemple.fr');
-  });
-
-  it("ne plante pas sur une valeur qui n'est pas une adresse", () => {
-    expect(emailMasque('pas-une-adresse')).toBe('—');
+describe('auteur public', () => {
+  it("n'expose aucune adresse e-mail", () => {
+    // Le test tient en une ligne parce que la fonction ne prend plus l'adresse
+    // en paramètre : il n'y a plus rien à masquer, donc plus rien à rater.
+    expect(auteurPublic()).toBe('Membre');
+    expect(auteurPublic()).not.toContain('@');
   });
 });

@@ -23,10 +23,11 @@ export default function MentionsLegales() {
         Contact : <a href="mailto:liam.chea09@gmail.com">liam.chea09@gmail.com</a>
       </p>
       <p>
-        Conformément à l&apos;article 1-1 de la loi pour la confiance dans l&apos;économie numérique,
-        une personne physique éditant un service à titre non professionnel peut ne pas publier son
-        adresse. Celle-ci est en revanche connue de l&apos;hébergeur, qui peut la communiquer à
-        l&apos;autorité judiciaire.
+        L&apos;article 1-1 de la loi pour la confiance dans l&apos;économie numérique (dans sa
+        version issue de la loi du 21 mai 2024) permet à une personne physique éditant un service à
+        titre non professionnel de ne pas publier ses éléments d&apos;identification, à condition de
+        les avoir communiqués à son hébergeur. Pour toute demande relevant de l&apos;autorité
+        judiciaire, l&apos;hébergeur ci-dessous est le point de contact.
       </p>
 
       <h2>Hébergement</h2>
@@ -50,6 +51,15 @@ export default function MentionsLegales() {
         rémunérés, et aucun n&apos;est supprimé au motif qu&apos;il serait négatif. Chaque personne
         peut déposer un seul avis par cours, et le modifier ou le supprimer à tout moment depuis son
         compte.
+      </p>
+      <p>
+        <strong>Signaler un avis</strong> — un avis vous paraît illicite, diffamatoire ou hors
+        sujet ? Écrivez à{' '}
+        <a href="mailto:liam.chea09@gmail.com?subject=Signalement%20d%27un%20avis">
+          liam.chea09@gmail.com
+        </a>{' '}
+        en indiquant le cours concerné. Le signalement est traité et l&apos;avis retiré s&apos;il y a
+        lieu.
       </p>
 
       <h2>Données personnelles</h2>

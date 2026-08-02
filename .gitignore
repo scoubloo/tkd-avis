@@ -10,6 +10,11 @@ next-env.d.ts
 .env.local
 .env.production
 
+# Données vivantes de PostgreSQL si quelqu'un lance la pile en local.
+# Sans cette ligne, un `git add -A` après un `docker compose up` commiterait un
+# cluster entier — adresses e-mail et empreintes comprises.
+donnees/
+
 # Sorties de test
 test-results/
 playwright-report/

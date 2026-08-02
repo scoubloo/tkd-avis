@@ -12,7 +12,11 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 # `npm ci` installe EXACTEMENT ce que décrit package-lock.json. `npm install`
 # pourrait résoudre une version différente de celle qui a été testée.
-RUN npm ci --no-audit --no-fund && npm rebuild esbuild sharp --foreground-scripts
+# `--ignore-scripts` : aucune dépendance n'exécute de code arbitraire en root
+# pendant la construction. Les deux seuls paquets qui ont réellement besoin de
+# leur script d'installation sont reconstruits explicitement, par leur nom.
+RUN npm ci --no-audit --no-fund --ignore-scripts \
+ && npm rebuild esbuild sharp --foreground-scripts
 
 # --- 2. Construction ---------------------------------------------------------
 FROM node:22-bookworm-slim AS build
