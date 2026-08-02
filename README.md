@@ -120,12 +120,10 @@ ssh … "cd /srv/tkd-avis && TKD_TAG=<empreinte> docker compose up -d tkd-avis-a
 
 ## Limites connues, écrites plutôt que tues
 
-- L'application partage son nom d'hôte avec sept autres démonstrations. Un
-  sous-domaine dédié serait plus sûr ; il demande un certificat, et le quota de
-  l'autorité de certification est contraint sur ce domaine.
 - Les e-mails partent par un compte Gmail personnel : une copie de chaque
   message reste dans sa boîte d'envoi. C'est écrit dans la page « Données
   personnelles ». Un prestataire d'envoi transactionnel avec contrat de
   sous-traitance serait le vrai correctif.
-- Il n'y a pas encore de récupération de mot de passe ; l'outillage est écrit
-  mais le parcours n'est pas branché.
+- L'application partage son nom d'hôte avec sept autres démonstrations : une XSS
+  dans l'une d'elles serait *same-origin* avec celle-ci. Un sous-domaine dédié est
+  le seul correctif complet ; il demande un certificat.

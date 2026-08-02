@@ -1,7 +1,12 @@
 {
-  "genere_le": "02/08/2026 à 10:49",
-  "commit": "bc0e19c",
+  "genere_le": "02/08/2026 à 11:00",
+  "commit": "ba158c2",
   "commits": [
+    {
+      "empreinte": "ba158c2",
+      "date": "02/08/2026 10:54",
+      "titre": "Gate de livraison : un contrôle qui refuse au lieu d'attendre qu'on l'appelle"
+    },
     {
       "empreinte": "bc0e19c",
       "date": "02/08/2026 10:37",
