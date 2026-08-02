@@ -13,16 +13,20 @@ Un back-office permet de suivre les utilisateurs et les cours.
 ## Installation — une commande
 
 ```bash
-./demarrer.sh
+git clone https://github.com/scoubloo/tkd-avis.git && cd tkd-avis && ./demarrer.sh
 ```
 
 C'est tout. Rien à installer, rien à configurer, aucun fichier à remplir.
 
 **La base de données est embarquée.** Ce que la machine a comme moteur installé
 — PostgreSQL, MariaDB, MySQL, ou rien du tout — n'a aucune importance : le
-projet apporte le sien et ne touche à rien sur la machine hôte. Seul **Docker**
-est nécessaire ; si le démon n'est pas lancé, la commande le dit et s'arrête au
-lieu d'échouer en route.
+projet apporte le sien et ne parle pas au vôtre. Seul **Docker** est
+nécessaire ; si le démon n'est pas lancé, la commande le dit et s'arrête au lieu
+d'échouer en route.
+
+Ce qu'elle prend sur la machine, et rien d'autre : les ports **3000** (le site)
+et **8025** (les e-mails). La base, elle, n'est publiée sur aucun port — elle
+n'est joignable que par l'application.
 
 Au premier lancement, la commande construit l'image, crée le schéma, charge le
 catalogue et cinq comptes déjà confirmés, puis attend que la page réponde
