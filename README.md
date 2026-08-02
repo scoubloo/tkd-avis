@@ -10,28 +10,39 @@ Un back-office permet de suivre les utilisateurs et les cours.
 > e-mail en `@exemple.fr` appartiennent à un domaine réservé par la RFC 2606 :
 > aucun message ne peut partir vers une vraie personne.
 
-## Ce dépôt est une extraction, et deux choses y ont été caviardées
+## Ce dépôt est une extraction, et il a été nettoyé avant publication
 
 Le projet a d'abord vécu dans un dépôt privé plus large. Il en a été extrait avec
-`git subtree split`, ce qui conserve **les neuf commits réels** et leurs messages.
+`git subtree split`, ce qui conserve **les commits réels** et leurs messages. Le
+code, les tests et les migrations sont intacts.
 
-Avant publication, deux chaînes ont été remplacées dans l'ensemble de
-l'historique — c'est écrit ici plutôt que passé sous silence :
+Ce qui a été retiré ou remplacé dans l'ensemble de l'historique est écrit ici
+plutôt que passé sous silence.
 
-- **l'adresse SSH du serveur de déploiement**, `utilisateur@adresse`, dans
-  `deploy.sh` et `tests/e2e/lancer.sh`. Les deux scripts lisent maintenant la
-  variable d'environnement `VPS_HOTE` et refusent de partir si elle est absente.
-  À noter : le nom d'hôte public du site, lui, est resté — il résout vers cette
-  même machine. Ce que le caviardage retire, c'est le panneau « connectez-vous
-  ici en root », pas l'existence du serveur ;
-- **l'adresse e-mail du compte administrateur** de l'instance en ligne, qui
-  figurait dans le dossier de recette.
+**Deux chaînes remplacées :**
+
+- **l'adresse SSH du serveur de déploiement**, dans `deploy.sh` et
+  `tests/e2e/lancer.sh`. Les deux scripts lisent maintenant la variable
+  d'environnement `VPS_HOTE` et refusent de partir si elle est absente. À noter :
+  le nom d'hôte public du site, lui, est resté — il résout vers cette même
+  machine. Ce que le caviardage retire, c'est le panneau « connectez-vous ici en
+  root », pas l'existence du serveur ;
+- **l'adresse e-mail du compte administrateur** de l'instance en ligne.
+
+**Trois documents retirés**, parce qu'ils étaient écrits pour le dépôt privé et
+non pour un lecteur : deux notes de travail internes et un dossier de recette
+adressé à une personne. Ils contenaient des chemins d'infrastructure sans rapport
+avec ce projet, et le dossier publiait le mot de passe de cinq comptes de
+démonstration **actifs en production** — ce mot de passe a été changé.
 
 Rien d'autre n'a été touché. L'adresse de contact des mentions légales est
 restée : elle est obligatoire et déjà affichée sur le site.
 
-Deux scanners passés sur les neuf commits, pas seulement sur l'état final :
-`gitleaks detect` et le scanner maison du dépôt d'origine. Aucun secret trouvé.
+Deux scanners passés sur l'ensemble des commits, pas seulement sur l'état final :
+`gitleaks detect` et le scanner du dépôt d'origine. Aucun secret trouvé — mais
+c'est justement la limite de l'exercice : **aucun des deux ne voyait l'adresse du
+serveur ni le mot de passe des comptes**, parce que ce ne sont pas des motifs de
+clé. Il a fallu les chercher à la main.
 
 ---
 
