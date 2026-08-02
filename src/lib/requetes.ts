@@ -14,6 +14,61 @@ import { courses, reviews, users } from '@/db/schema';
  * `::float8`, on comparerait des chaînes et « 10 » serait plus petit que « 9 ».
  */
 
+/**
+ * Le catalogue, sans aucun agrégat.
+ *
+ * ⚠️ C'est la requête du côté PUBLIC, et la distinction n'est pas cosmétique :
+ * le cahier des charges range les moyennes et les comptages sous
+ * « fonctionnalité admin ». Une page publique qui appellerait
+ * `listerCoursAvecNotes()` en n'affichant pas le résultat calculerait quand
+ * même ce qu'elle n'a pas le droit de montrer — et le premier qui aurait
+ * besoin d'un chiffre le rebrancherait sans y penser.
+ */
+export async function listerCours() {
+  return db
+    .select({
+      id: courses.id,
+      slug: courses.slug,
+      nom: courses.nom,
+      professeur: courses.professeur,
+      jour: courses.jour,
+      heure: courses.heure,
+      dureeMin: courses.dureeMin,
+      niveau: courses.niveau,
+      lieu: courses.lieu,
+    })
+    .from(courses)
+    .where(eq(courses.actif, true))
+    .orderBy(asc(courses.jour), asc(courses.heure));
+}
+
+export async function trouverCoursParSlug(slug: string) {
+  const lignes = await db.select().from(courses).where(eq(courses.slug, slug)).limit(1);
+  return lignes[0] ?? null;
+}
+
+export type AvisAffiche = {
+  id: string;
+  note: number;
+  commentaire: string;
+  createdAt: Date;
+  auteurEmail: string;
+};
+
+export async function trouverAvisDe(userId: string, coursId: string) {
+  const lignes = await db
+    .select()
+    .from(reviews)
+    .where(and(eq(reviews.userId, userId), eq(reviews.courseId, coursId)))
+    .limit(1);
+  return lignes[0] ?? null;
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Back-office — moyennes, comptages et avis d'autrui vivent ICI et nulle part */
+/*  ailleurs. C'est la seule règle métier que le cahier des charges énonce.     */
+/* -------------------------------------------------------------------------- */
+
 export type CoursAvecNotes = {
   id: string;
   slug: string;
@@ -52,21 +107,6 @@ export async function listerCoursAvecNotes(): Promise<CoursAvecNotes[]> {
   return lignes;
 }
 
-export async function trouverCoursParSlug(slug: string) {
-  const lignes = await db.select().from(courses).where(eq(courses.slug, slug)).limit(1);
-  return lignes[0] ?? null;
-}
-
-export type AvisAffiche = {
-  id: string;
-  note: number;
-  commentaire: string;
-  createdAt: Date;
-  updatedAt: Date;
-  auteurId: string;
-  auteurEmail: string;
-};
-
 export async function listerAvisDuCours(coursId: string): Promise<AvisAffiche[]> {
   return db
     .select({
@@ -74,8 +114,6 @@ export async function listerAvisDuCours(coursId: string): Promise<AvisAffiche[]>
       note: reviews.note,
       commentaire: reviews.commentaire,
       createdAt: reviews.createdAt,
-      updatedAt: reviews.updatedAt,
-      auteurId: users.id,
       auteurEmail: users.email,
     })
     .from(reviews)
@@ -83,35 +121,6 @@ export async function listerAvisDuCours(coursId: string): Promise<AvisAffiche[]>
     .where(eq(reviews.courseId, coursId))
     .orderBy(raw`${reviews.updatedAt} DESC`);
 }
-
-export async function trouverAvisDe(userId: string, coursId: string) {
-  const lignes = await db
-    .select()
-    .from(reviews)
-    .where(and(eq(reviews.userId, userId), eq(reviews.courseId, coursId)))
-    .limit(1);
-  return lignes[0] ?? null;
-}
-
-export async function listerMesAvis(userId: string) {
-  return db
-    .select({
-      id: reviews.id,
-      note: reviews.note,
-      commentaire: reviews.commentaire,
-      updatedAt: reviews.updatedAt,
-      coursNom: courses.nom,
-      coursSlug: courses.slug,
-    })
-    .from(reviews)
-    .innerJoin(courses, eq(courses.id, reviews.courseId))
-    .where(eq(reviews.userId, userId))
-    .orderBy(raw`${reviews.updatedAt} DESC`);
-}
-
-/* -------------------------------------------------------------------------- */
-/*  Back-office                                                               */
-/* -------------------------------------------------------------------------- */
 
 export type LigneUtilisateur = {
   id: string;
@@ -148,26 +157,4 @@ export async function listerUtilisateurs(): Promise<LigneUtilisateur[]> {
     coursNotes: l.coursNotes,
     moyenneDonnee: l.moyenneDonnee,
   }));
-}
-
-export async function statistiques() {
-  const [ligne] = await db
-    .select({
-      utilisateurs: raw<number>`(SELECT count(*)::int FROM users)`,
-      confirmes: raw<number>`(SELECT count(*)::int FROM users WHERE email_verified_at IS NOT NULL)`,
-      cours: raw<number>`(SELECT count(*)::int FROM courses WHERE actif)`,
-      avis: raw<number>`(SELECT count(*)::int FROM reviews)`,
-      moyenneGlobale: raw<number | null>`(SELECT round(avg(note), 1)::float8 FROM reviews)`,
-    })
-    .from(raw`(SELECT 1) AS _`);
-
-  return (
-    ligne ?? {
-      utilisateurs: 0,
-      confirmes: 0,
-      cours: 0,
-      avis: 0,
-      moyenneGlobale: null,
-    }
-  );
 }

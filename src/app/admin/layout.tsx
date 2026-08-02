@@ -16,8 +16,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <>
       <p className="fil">
-        <Link href="/admin">Administration</Link> · <Link href="/admin/utilisateurs">Utilisateurs</Link>{' '}
-        · <Link href="/admin/cours">Cours</Link>
+        Administration · <Link href="/admin/utilisateurs">Utilisateurs</Link> ·{' '}
+        <Link href="/admin/cours">Cours</Link>
       </p>
       {children}
     </>

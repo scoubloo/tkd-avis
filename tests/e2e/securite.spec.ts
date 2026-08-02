@@ -34,6 +34,40 @@ test.describe('ce qu\'un curieux va essayer', () => {
     expect(reponse?.status()).toBe(404);
   });
 
+  test("un membre ne voit ni les avis des autres, ni la moindre moyenne", async ({ page }) => {
+    // ⚠️ Ce test garde la SEULE règle métier que le cahier des charges énonce :
+    // les moyennes, les comptages et la lecture des avis d'autrui sont rangés
+    // sous « fonctionnalité admin ». Les avoir mis côté public a été le reproche
+    // du 02/08/2026 ; sans ce test, rien n'empêche de les y remettre un jour
+    // « pour faire plus vivant ».
+    const TEXTE = 'Phrase temoin deposee par le premier membre pour ce test de frontiere.';
+
+    const premier = adresseUnique('frontiere-a');
+    await creerCompteConfirme(page, premier);
+    await page.goto('cours/combat-jeudi');
+    await page.locator('input[name="note"][value="5"]').check();
+    await page.locator('#commentaire').fill(TEXTE);
+    await page.getByRole('button', { name: 'Publier mon avis' }).click();
+    await expect(page.getByText('Votre avis est enregistré')).toBeVisible();
+
+    // Déconnexion, puis un SECOND membre ouvre le même cours.
+    await page.getByRole('button', { name: 'Se déconnecter' }).click();
+    await page.getByRole('link', { name: 'Créer un compte' }).waitFor();
+    await viderCompteurs();
+    await creerCompteConfirme(page, adresseUnique('frontiere-b'));
+    await page.goto('cours/combat-jeudi');
+
+    // Il ne lit pas l'avis du premier…
+    await expect(page.getByText(TEXTE)).toHaveCount(0);
+    // …et aucune note agrégée ne s'affiche : les étoiles n'existent plus que
+    // dans le back-office.
+    await expect(page.locator('.etoiles')).toHaveCount(0);
+    await expect(page.locator('.note__valeur')).toHaveCount(0);
+
+    // Son propre formulaire, lui, est bien là : c'est ce que l'énoncé demande.
+    await expect(page.getByRole('button', { name: 'Publier mon avis' })).toBeVisible();
+  });
+
   test("l'inscription ne révèle pas si une adresse est déjà connue", async ({ page }) => {
     const email = adresseUnique('doublon');
     await creerCompteConfirme(page, email);
@@ -100,12 +134,28 @@ test.describe('ce qu\'un curieux va essayer', () => {
   test('la limitation de débit bloque le bourrinage de mot de passe', async ({ page }) => {
     const email = adresseUnique('bourrinage');
 
+    // ⚠️ On attend la RÉPONSE du serveur à chaque essai, pas l'apparition d'un
+    // message à l'écran, et on ne recharge pas la page entre deux essais.
+    //
+    // La version précédente rechargeait `/connexion` à chaque tour et attendait
+    // le bloc d'alerte. Deux fragilités, qui se sont réveillées le 02/08/2026
+    // sur le profil iPhone : l'alerte de l'essai précédent est encore là quand
+    // on l'attend (donc le tour suivant part trop tôt), et si le formulaire
+    // part en envoi natif — ce qui arrive tant que la page n'est pas hydratée —
+    // le rechargement suivant entre en collision avec la navigation en cours.
+    // Playwright s'arrêtait alors sur « navigation interrompue » sans rien
+    // prouver ni infirmer sur la limitation elle-même.
+    await page.goto('connexion');
+
     for (let essai = 1; essai <= 6; essai += 1) {
-      await page.goto('connexion');
       await page.getByLabel('Adresse e-mail').fill(email);
       await page.getByLabel('Mot de passe').fill(`tentative-numero-${essai}`);
-      await page.getByRole('button', { name: 'Se connecter' }).click();
-      await page.getByRole('alert').waitFor();
+      await Promise.all([
+        page.waitForResponse(
+          (r) => r.request().method() === 'POST' && r.url().includes('/connexion'),
+        ),
+        page.getByRole('button', { name: 'Se connecter' }).click(),
+      ]);
     }
 
     // Au sixième essai, le message change : ce n'est plus « identifiants

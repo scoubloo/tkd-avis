@@ -22,8 +22,7 @@ export function SuppressionCompte() {
       <Message etat={etat} />
       <p>
         La suppression est <strong>définitive</strong> : votre compte et tous vos avis
-        disparaissent, et les moyennes des cours sont recalculées sans eux. Rien ne peut être
-        récupéré ensuite.
+        disparaissent. Rien ne peut être récupéré ensuite.
       </p>
       <div className="champ">
         <label className="champ__intitule" htmlFor="confirmation">

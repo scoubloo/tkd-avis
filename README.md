@@ -18,13 +18,28 @@ Un back-office permet de suivre les utilisateurs et les cours.
 - inscription par e-mail et mot de passe ;
 - confirmation de l'adresse par un lien reçu par e-mail, valable 24 h, à usage unique ;
 - dépôt d'un avis sur un cours : une note de 1 à 5 et une description ;
-- un seul avis par personne et par cours, modifiable et supprimable ;
-- récupération de toutes ses données en un clic, suppression de son compte en un clic.
+- un seul avis par personne et par cours, modifiable et supprimable.
 
 **Côté administrateur**
 - liste des utilisateurs : adresse, nombre de cours notés, moyenne des notes données ;
 - liste des cours : nombre de notes et moyenne ;
-- fiche d'un cours : répartition des notes et détail de chaque avis.
+- fiche d'un cours : le détail de chaque avis, avec sa note et sa description.
+
+**La frontière entre les deux est la seule règle métier de l'énoncé.** Les
+moyennes, les comptages et la lecture des avis d'autrui sont des capacités
+**administrateur**. Un membre connecté ne voit ni moyenne, ni étoile, ni l'avis
+de qui que ce soit d'autre — seulement le sien, dans le formulaire.
+
+Cette frontière avait été effacée dans une première version : l'accueil affichait
+la moyenne de chaque cours et la page d'un cours affichait tous les avis. Le
+02/08/2026, le commanditaire l'a relevé (« à quel moment j'ai demandé que les
+utilisateurs voient la note moyenne d'un cours ? »). Elle est rétablie, et
+`tests/e2e/securite.spec.ts` la garde : deux membres, un avis, et la preuve que
+le second ne le voit pas.
+
+Deux fonctionnalités finies mais hors énoncé ont été débranchées le même jour et
+attendent dans `hors-perimetre/` : le mot de passe oublié et le renvoi de
+l'e-mail de confirmation.
 
 ---
 
@@ -57,6 +72,7 @@ src/lib/            configuration, e-mails, limitation de débit, validation, fo
 src/app/            les écrans
 tests/unit/         logique pure : mots de passe, jetons, moyennes, validation
 tests/e2e/          parcours réels dans un navigateur
+hors-perimetre/     du code qui marche, volontairement débranché (voir son README)
 ```
 
 ---
@@ -105,8 +121,15 @@ ssh … "cd /srv/tkd-avis && TKD_TAG=<empreinte> docker compose up -d tkd-avis-a
   base. Sans elle, une seule personne peut voter vingt fois et fausser une moyenne.
 - **Aucune moyenne n'est stockée** : tout se recalcule à la lecture. Un agrégat
   dupliqué finit toujours par diverger de ce qu'il résume.
-- **Aucune adresse e-mail n'est publiée**, même partiellement masquée : les avis
-  sont signés « Membre ». Le service n'a pas besoin de l'afficher.
+- **Aucune adresse e-mail n'est publiée.** La question ne se pose même plus
+  depuis que les avis d'autrui ont quitté le côté public : la seule page qui
+  affiche des adresses est le back-office, et c'est écrit dans la page
+  « Données personnelles ».
+- **Les deux boutons d'exercice des droits** (récupérer ses données, supprimer
+  son compte) sont au bas de la page « Données personnelles ». Ils avaient une
+  page « Mon compte » à eux, retirée parce qu'elle n'était pas demandée — mais
+  des droits promis sans bouton pour les exercer sont du travail manuel que
+  personne ne fait.
 - **On ne devient administrateur que par une commande sur le serveur**
   (`scripts/set-admin.mjs`). Aucun chemin depuis le site.
 - **Un non-administrateur reçoit 404 sur `/admin`**, pas 403 : répondre

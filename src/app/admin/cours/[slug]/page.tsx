@@ -34,14 +34,6 @@ export default async function FicheCours({ params }: { params: Promise<{ slug: s
   const avis = await listerAvisDuCours(cours.id);
   const note = moyenne(avis.map((a) => a.note));
 
-  // Répartition des notes : deux cours à 3,0 de moyenne peuvent avoir des
-  // profils opposés — que des 3, ou moitié 1 et moitié 5. La moyenne seule
-  // masque ce genre d'écart.
-  const repartition = [5, 4, 3, 2, 1].map((valeur) => ({
-    valeur,
-    nombre: avis.filter((a) => a.note === valeur).length,
-  }));
-
   return (
     <>
       <p className="fil">
@@ -63,31 +55,6 @@ export default async function FicheCours({ params }: { params: Promise<{ slug: s
           {avis.length > 0 && <> — moyenne <strong>{noteLisible(note)} / 5</strong></>}
         </p>
       </div>
-
-      {avis.length > 0 && (
-        <>
-          <h2 style={{ marginTop: '2rem' }}>Répartition</h2>
-          <div className="carte moyen">
-            {repartition.map((r) => (
-              <div key={r.valeur} className="rangee" style={{ gap: '.75rem', marginBottom: '.4rem', flexWrap: 'nowrap' }}>
-                <span style={{ width: '2.5rem', flexShrink: 0 }}>{r.valeur} ★</span>
-                <span
-                  aria-hidden="true"
-                  style={{
-                    background: 'var(--primaire)',
-                    height: '.85rem',
-                    borderRadius: '3px',
-                    width: `${avis.length > 0 ? (r.nombre / avis.length) * 100 : 0}%`,
-                    minWidth: r.nombre > 0 ? '3px' : 0,
-                    flexShrink: 0,
-                  }}
-                />
-                <span className="compte-avis">{r.nombre}</span>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
 
       <h2 style={{ marginTop: '2rem' }}>Les avis, un par un</h2>
 

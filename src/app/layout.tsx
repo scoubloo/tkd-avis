@@ -43,7 +43,6 @@ export default async function RacineLayout({ children }: { children: React.React
               {utilisateur ? (
                 <>
                   {utilisateur.role === 'admin' && <Link href="/admin">Administration</Link>}
-                  <Link href="/mon-compte">Mon compte</Link>
                   <form action={deconnexion}>
                     <button
                       type="submit"
@@ -82,11 +81,6 @@ export default async function RacineLayout({ children }: { children: React.React
               </li>
               <li>
                 <Link href="/confidentialite">Données personnelles</Link>
-              </li>
-              <li>
-                <Link href="/coulisses">
-                  <strong>Coulisses</strong> — le code, la base, les preuves
-                </Link>
               </li>
             </ul>
             <p style={{ margin: 0 }}>

@@ -1,20 +1,22 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { Etoiles, Note } from '@/components/Etoiles';
 import { lireSession } from '@/lib/auth/session';
-import {
-  accord,
-  dateLisible,
-  dureeLisible,
-  auteurPublic,
-  heureLisible,
-  moyenne,
-  nomDuJour,
-} from '@/lib/format';
-import { listerAvisDuCours, trouverAvisDe, trouverCoursParSlug } from '@/lib/requetes';
+import { dureeLisible, heureLisible, nomDuJour } from '@/lib/format';
+import { trouverAvisDe, trouverCoursParSlug } from '@/lib/requetes';
 import { FormulaireAvis } from './FormulaireAvis';
 
+/**
+ * Page publique d'un cours.
+ *
+ * ⚠️ Elle ne montre NI la moyenne, NI le nombre d'avis, NI les avis des autres.
+ * Le cahier des charges range ces trois choses sous « fonctionnalité admin » ;
+ * les afficher ici déplacerait une capacité d'un rôle vers l'autre. Côté
+ * utilisateur, l'énoncé ne demande qu'une chose : pouvoir saisir son avis.
+ *
+ * Le sien lui reste visible — c'est le formulaire lui-même, pré-rempli, qui le
+ * porte : sans ça, « modifiable à tout moment » ne veut plus rien dire.
+ */
 export async function generateMetadata({
   params,
 }: {
@@ -30,9 +32,8 @@ export default async function PageCours({ params }: { params: Promise<{ slug: st
   const cours = await trouverCoursParSlug(slug);
   if (!cours) notFound();
 
-  const [avis, utilisateur] = await Promise.all([listerAvisDuCours(cours.id), lireSession()]);
+  const utilisateur = await lireSession();
   const monAvis = utilisateur ? await trouverAvisDe(utilisateur.id, cours.id) : null;
-  const note = moyenne(avis.map((a) => a.note));
 
   return (
     <>
@@ -51,15 +52,9 @@ export default async function PageCours({ params }: { params: Promise<{ slug: st
           <br />
           {cours.lieu}
         </p>
-        <p style={{ margin: '.9rem 0 0' }}>
-          <Note valeur={note} nombreAvis={avis.length} />
-          {avis.length > 0 && (
-            <span className="compte-avis"> — {avis.length} {accord(avis.length, 'avis', 'avis')}</span>
-          )}
-        </p>
       </div>
 
-      <section aria-labelledby="titre-formulaire" style={{ marginBottom: '2.5rem' }}>
+      <section aria-labelledby="titre-formulaire">
         <h2 id="titre-formulaire">{monAvis ? 'Votre avis' : 'Donner votre avis'}</h2>
 
         {!utilisateur && (
@@ -75,7 +70,7 @@ export default async function PageCours({ params }: { params: Promise<{ slug: st
           <div className="message message--info moyen">
             <p>
               Confirmez d&apos;abord votre adresse e-mail — le lien vous a été envoyé à
-              l&apos;inscription. <Link href="/connexion">Demander un nouvel envoi</Link>.
+              l&apos;inscription.
             </p>
           </div>
         )}
@@ -88,41 +83,6 @@ export default async function PageCours({ params }: { params: Promise<{ slug: st
             />
           </div>
         )}
-      </section>
-
-      <section aria-labelledby="titre-avis">
-        <h2 id="titre-avis">
-          {avis.length === 0
-            ? 'Aucun avis pour le moment'
-            : `${avis.length} ${accord(avis.length, 'avis', 'avis')}`}
-        </h2>
-
-        {avis.length === 0 && (
-          <p className="vide">Ce cours n&apos;a pas encore été noté. Vous pouvez être la première personne à le faire.</p>
-        )}
-
-        <div className="pile moyen">
-          {avis.map((a) => (
-            <article key={a.id} className="carte">
-              <div className="rangee" style={{ justifyContent: 'space-between' }}>
-                <span className="rangee" style={{ gap: '.5rem' }}>
-                  <Etoiles valeur={a.note} />
-                  <strong>{a.note}/5</strong>
-                  {utilisateur?.id === a.auteurId && (
-                    <span className="etiquette etiquette--admin">votre avis</span>
-                  )}
-                </span>
-                <span className="compte-avis">{dateLisible(a.updatedAt)}</span>
-              </div>
-              <p style={{ margin: '.7rem 0 .4rem', whiteSpace: 'pre-wrap' }}>{a.commentaire}</p>
-              {/* Aucune adresse e-mail n'est publiée, même masquée : le service
-                  n'en a pas besoin pour fonctionner. */}
-              <p className="compte-avis" style={{ margin: 0 }}>
-                {auteurPublic()}
-              </p>
-            </article>
-          ))}
-        </div>
       </section>
     </>
   );

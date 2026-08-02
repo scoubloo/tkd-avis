@@ -71,19 +71,3 @@ export function dateLisible(date: Date): string {
     timeZone: 'Europe/Paris',
   });
 }
-
-/**
- * Étiquette publique de l'auteur d'un avis.
- *
- * ⚠️ Une version précédente affichait l'adresse partiellement masquée
- * (« m•••••••t@exemple.fr »). C'était la mauvaise réponse à la bonne question :
- * le masque conservait la première lettre, la dernière et le DOMAINE ENTIER,
- * ce qui reste ré-identifiant sur une petite base — et surtout, rien dans le
- * service n'exige d'afficher une adresse.
- *
- * Le principe de minimisation ne demande pas de mieux masquer une donnée
- * inutile : il demande de ne pas la publier.
- */
-export function auteurPublic(): string {
-  return 'Membre';
-}

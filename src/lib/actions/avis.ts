@@ -60,7 +60,6 @@ export async function deposerAvis(
 
   revalidatePath('/');
   revalidatePath(`/cours/${trouve.slug}`);
-  revalidatePath('/mon-compte');
 
   return succes('Votre avis est enregistré. Vous pouvez le modifier quand vous voulez.');
 }
@@ -81,7 +80,6 @@ export async function supprimerAvis(
     .where(and(eq(reviews.userId, utilisateur.id), eq(reviews.courseId, coursId)));
 
   revalidatePath('/');
-  revalidatePath('/mon-compte');
 
   return succes('Votre avis a été supprimé.');
 }

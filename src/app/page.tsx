@@ -1,11 +1,10 @@
 import Link from 'next/link';
-import { Note } from '@/components/Etoiles';
 import { lireSession } from '@/lib/auth/session';
-import { accord, dureeLisible, heureLisible, nomDuJour } from '@/lib/format';
-import { listerCoursAvecNotes } from '@/lib/requetes';
+import { dureeLisible, heureLisible, nomDuJour } from '@/lib/format';
+import { listerCours } from '@/lib/requetes';
 
 export default async function Accueil() {
-  const [cours, utilisateur] = await Promise.all([listerCoursAvecNotes(), lireSession()]);
+  const [cours, utilisateur] = await Promise.all([listerCours(), lireSession()]);
 
   return (
     <>
@@ -34,14 +33,6 @@ export default async function Accueil() {
               <br />
               {c.professeur} · {c.niveau}
             </p>
-            <span className="rangee" style={{ marginTop: 'auto', gap: '.5rem' }}>
-              <Note valeur={c.moyenne} nombreAvis={c.nombreAvis} />
-              {c.nombreAvis > 0 && (
-                <span className="compte-avis">
-                  {c.nombreAvis} {accord(c.nombreAvis, 'avis', 'avis')}
-                </span>
-              )}
-            </span>
           </Link>
         ))}
       </div>

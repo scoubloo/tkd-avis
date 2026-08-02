@@ -87,8 +87,3 @@ export async function detruireSession(): Promise<void> {
 
   magasin.set(nomCookie(), '', { path: CHEMIN, maxAge: 0 });
 }
-
-/** Invalide toutes les sessions d'un compte (changement de mot de passe). */
-export async function detruireToutesLesSessions(userId: string): Promise<void> {
-  await db.delete(sessions).where(eq(sessions.userId, userId));
-}

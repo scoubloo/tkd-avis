@@ -1,5 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { lireSession } from '@/lib/auth/session';
+import { lienBrut } from '@/lib/chemins';
+import { SuppressionCompte } from './SuppressionCompte';
 
 export const metadata: Metadata = { title: 'Données personnelles' };
 
@@ -13,15 +16,23 @@ export const metadata: Metadata = { title: 'Données personnelles' };
  *
  * Règle de maintenance : toute modification d'une durée ici doit être faite en
  * même temps que dans `scripts/purge.mjs`, et l'inverse.
+ *
+ * ⚠️ Les deux boutons d'exercice des droits (accès et effacement) sont sur
+ * CETTE page depuis le retrait du 02/08/2026. Ils avaient une page « Mon
+ * compte » à eux, que le cahier des charges ne demandait pas. Ils ne pouvaient
+ * pas partir avec elle : promettre ces droits sans les outiller, c'est
+ * annoncer du travail manuel que personne ne fera.
  */
-export default function Confidentialite() {
+export default async function Confidentialite() {
+  const utilisateur = await lireSession();
+
   return (
     <div className="texte-legal">
       <h1>Données personnelles</h1>
       <p className="chapeau">
         Cette page dit exactement ce qui est conservé, pourquoi, combien de temps, et comment tout
-        récupérer ou tout effacer. Les deux derniers points sont des boutons dans votre compte, pas
-        une adresse à qui écrire.
+        récupérer ou tout effacer. Les deux derniers points sont des boutons en bas de cette page,
+        pas une adresse à qui écrire.
       </p>
 
       <h2>Qui est responsable</h2>
@@ -110,18 +121,19 @@ export default function Confidentialite() {
       </ul>
 
       <h2>Vos droits</h2>
-      <p>Depuis la page <Link href="/mon-compte">Mon compte</Link>, sans rien demander à personne :</p>
+      <p>Sans rien demander à personne :</p>
       <ul>
         <li>
           <strong>Récupérer toutes vos données</strong> dans un fichier lisible (droits d&apos;accès
-          et de portabilité, art. 15 et 20).
+          et de portabilité, art. 15 et 20) — le bouton est en bas de cette page.
         </li>
         <li>
-          <strong>Modifier ou supprimer chacun de vos avis</strong> (droit de rectification, art. 16).
+          <strong>Modifier ou supprimer chacun de vos avis</strong>, depuis la page du cours
+          concerné (droit de rectification, art. 16).
         </li>
         <li>
           <strong>Supprimer votre compte</strong> définitivement, avec tous vos avis (droit à
-          l&apos;effacement, art. 17).
+          l&apos;effacement, art. 17) — le bouton est en bas de cette page.
         </li>
       </ul>
       <p>En écrivant à l&apos;adresse ci-dessus :</p>
@@ -167,6 +179,31 @@ export default function Confidentialite() {
         </li>
         <li>Base de données inaccessible depuis Internet.</li>
       </ul>
+
+      <h2>Exercer vos droits, maintenant</h2>
+
+      {utilisateur ? (
+        <>
+          <p>
+            Vous êtes connecté avec <strong>{utilisateur.email}</strong>.
+          </p>
+          <div className="rangee">
+            <a href={lienBrut('/api/mes-donnees')} className="bouton bouton--secondaire" download>
+              Télécharger mes données
+            </a>
+          </div>
+
+          <div className="carte" style={{ marginTop: '1.5rem', borderColor: '#e4c0bd' }}>
+            <SuppressionCompte />
+          </div>
+        </>
+      ) : (
+        <p>
+          <Link href="/connexion">Connectez-vous</Link> pour télécharger vos données ou supprimer
+          votre compte. Ces deux boutons n&apos;apparaissent qu&apos;une fois connecté : ils
+          agissent sur votre compte, il faut donc savoir de qui il s&apos;agit.
+        </p>
+      )}
 
       <p className="champ__aide">Dernière mise à jour : 2 août 2026.</p>
     </div>

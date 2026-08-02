@@ -59,12 +59,6 @@ export async function attendreMail(destinataire: string, delaiMs = 15_000): Prom
   throw new Error(`Aucun e-mail reçu pour ${destinataire} en ${delaiMs} ms.`);
 }
 
-export function lienDeReinitialisation(message: Message): string {
-  const trouve = message.texte.match(/https?:\/\/\S+\/reinitialisation\/\S+/);
-  if (!trouve) throw new Error(`Pas de lien de réinitialisation dans :\n${message.texte}`);
-  return trouve[0];
-}
-
 export function lienDeConfirmation(message: Message): string {
   const trouve = message.texte.match(/https?:\/\/\S+\/confirmation\/\S+/);
   if (!trouve) throw new Error(`Pas de lien de confirmation dans :\n${message.texte}`);
@@ -86,12 +80,18 @@ export async function creerCompteConfirme(page: Page, email: string): Promise<vo
   await connecter(page, email);
 }
 
+/**
+ * ⚠️ Le témoin de session est le bouton « Se déconnecter », pas un lien « Mon
+ * compte » : cette page a été retirée le 02/08/2026 (hors cahier des charges).
+ * Attendre un élément disparu ferait échouer la connexion de TOUS les tests par
+ * expiration, en accusant l'application d'un défaut qui serait le nôtre.
+ */
 export async function connecter(page: Page, email: string): Promise<void> {
   await page.goto('connexion');
   await page.getByLabel('Adresse e-mail').fill(email);
   await page.getByLabel('Mot de passe').fill(MOT_DE_PASSE);
   await page.getByRole('button', { name: 'Se connecter' }).click();
-  await page.getByRole('link', { name: 'Mon compte' }).waitFor();
+  await page.getByRole('button', { name: 'Se déconnecter' }).waitFor();
 }
 
 /**

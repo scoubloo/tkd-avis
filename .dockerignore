@@ -15,6 +15,7 @@ donnees/
 !.env.example
 
 # Inutile à la construction
+hors-perimetre/
 node_modules/
 .next/
 .git/

@@ -33,8 +33,6 @@ export type Quota = { limite: number; fenetreMs: number };
 export const QUOTAS = {
   connexion: { limite: 5, fenetreMs: 15 * 60 * 1000 },
   inscription: { limite: 3, fenetreMs: 60 * 60 * 1000 },
-  renvoiEmail: { limite: 3, fenetreMs: 60 * 60 * 1000 },
-  motDePasseOublie: { limite: 3, fenetreMs: 60 * 60 * 1000 },
 } as const satisfies Record<string, Quota>;
 
 export type Resultat = { autorise: boolean; restant: number; secondesAvantReset: number };

@@ -5,7 +5,6 @@ import {
   connecter,
   creerCompteConfirme,
   lienDeConfirmation,
-  lienDeReinitialisation,
   MOT_DE_PASSE,
   viderBoite,
   viderCompteurs,
@@ -57,19 +56,28 @@ test.describe('parcours complet', () => {
     await page.getByRole('button', { name: 'Publier mon avis' }).click();
     await expect(page.getByText('Votre avis est enregistré')).toBeVisible();
 
-    // --- Il est visible publiquement, et la moyenne le reflète ---
-    await expect(page.locator('.note__valeur').first()).toHaveText('5,0');
-    await expect(page.locator('.etiquette', { hasText: 'votre avis' })).toBeVisible();
+    // --- L'avis est retrouvé par son auteur, et par lui seul ---
+    //
+    // ⚠️ Cette vérification portait avant sur la moyenne affichée en public
+    // (« 5,0 ») et sur l'étiquette « votre avis » au milieu des avis de tout le
+    // monde. Ces deux affichages sont partis le 02/08/2026 : le cahier des
+    // charges range les moyennes et la lecture des avis d'autrui sous ADMIN.
+    // Ce qui reste vrai côté utilisateur, c'est que son propre avis lui revient
+    // dans le formulaire — sans quoi « modifiable à tout moment » serait faux.
+    await expect(page.getByRole('heading', { name: 'Votre avis' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Modifier mon avis' })).toBeVisible();
+    await expect(page.locator('#commentaire')).toHaveValue(/Ma fille de cinq ans/);
 
     // --- Modification : un seul avis, pas un second ---
     await page.locator('input[name=\"note\"][value=\"3\"]').check();
     await page.getByRole('button', { name: 'Modifier mon avis' }).click();
     await expect(page.getByText('Votre avis est enregistré')).toBeVisible();
-    await expect(page.getByRole('heading', { name: '1 avis' })).toBeVisible();
 
     // --- Suppression ---
     await page.getByRole('button', { name: 'Supprimer mon avis' }).click();
     await expect(page.getByText('Votre avis a été supprimé')).toBeVisible();
+    // Le formulaire est revenu à son état de départ : plus d'avis à modifier.
+    await expect(page.getByRole('button', { name: 'Publier mon avis' })).toBeVisible();
   });
 
   test('mes données sont exportables et mon compte supprimable', async ({ page }) => {
@@ -96,8 +104,10 @@ test.describe('parcours complet', () => {
     expect(donnees.avis).toHaveLength(1);
     expect(JSON.stringify(donnees)).not.toContain(MOT_DE_PASSE);
 
-    // Droit à l'effacement.
-    await page.goto('mon-compte');
+    // Droit à l'effacement. Les deux boutons vivent désormais au bas de la page
+    // « Données personnelles » : la page « Mon compte » qui les portait était
+    // hors cahier des charges et a été retirée. Les droits, eux, ne le sont pas.
+    await page.goto('confidentialite');
     await page.getByRole('button', { name: 'Supprimer mon compte' }).click();
     await page.getByLabel('Écrivez SUPPRIMER pour confirmer').fill('SUPPRIMER');
     await page.getByRole('button', { name: 'Supprimer définitivement' }).click();
@@ -106,69 +116,6 @@ test.describe('parcours complet', () => {
     // Le compte n'existe plus : impossible de s'y reconnecter.
     await connecterSansAttendre(page, email);
     await expect(page.getByText('Adresse e-mail ou mot de passe incorrect')).toBeVisible();
-  });
-
-  test('un mot de passe oublié se réinitialise, et ferme les sessions ouvertes', async ({
-    page,
-    context,
-  }) => {
-    const email = adresseUnique('oubli');
-    const NOUVEAU = 'un-tout-autre-mot-de-passe';
-
-    await creerCompteConfirme(page, email);
-    // Une session est ouverte à cet instant : on vérifie plus bas qu'elle est
-    // bien fermée par la réinitialisation.
-    await expect(page.getByRole('link', { name: 'Mon compte' })).toBeVisible();
-
-    await page.goto('mot-de-passe-oublie');
-    await page.getByLabel('Votre adresse e-mail').fill(email);
-    await page.getByRole('button', { name: 'Recevoir un lien' }).click();
-    await expect(page.getByText('Si un compte existe pour cette adresse')).toBeVisible();
-
-    const lien = lienDeReinitialisation(await attendreMail(email));
-
-    // Ouvrir la page ne doit PAS brûler le lien : on l'ouvre deux fois.
-    await page.goto(lien);
-    await expect(page.getByRole('heading', { name: 'Choisissez un nouveau mot de passe' })).toBeVisible();
-    await page.goto(lien);
-    await expect(page.getByRole('heading', { name: 'Choisissez un nouveau mot de passe' })).toBeVisible();
-
-    await page.getByLabel('Nouveau mot de passe').fill(NOUVEAU);
-    await page.getByRole('button', { name: 'Choisir ce mot de passe' }).click();
-    await expect(page.getByText('Votre mot de passe a été changé')).toBeVisible();
-
-    // La session d'avant est morte : la page de connexion s'affiche au lieu de
-    // rediriger un utilisateur déjà connecté.
-    await page.goto('mon-compte');
-    await expect(page.getByRole('heading', { name: 'Se connecter' })).toBeVisible();
-
-    // L'ancien mot de passe ne fonctionne plus…
-    await page.goto('connexion');
-    await page.getByLabel('Adresse e-mail').fill(email);
-    await page.getByLabel('Mot de passe').fill(MOT_DE_PASSE);
-    await page.getByRole('button', { name: 'Se connecter' }).click();
-    await expect(page.getByText('Adresse e-mail ou mot de passe incorrect')).toBeVisible();
-
-    // …le nouveau, si. On re-remplit les DEUX champs : après un envoi, React
-    // vide les champs non contrôlés du formulaire.
-    await page.getByLabel('Adresse e-mail').fill(email);
-    await page.getByLabel('Mot de passe').fill(NOUVEAU);
-    await page.getByRole('button', { name: 'Se connecter' }).click();
-    await expect(page.getByRole('link', { name: 'Mon compte' })).toBeVisible();
-
-    // Et le lien de réinitialisation, lui, a bien été consommé.
-    await context.clearCookies();
-    await page.goto(lien);
-    await expect(page.getByRole('heading', { name: "Ce lien n'est plus valable" })).toBeVisible();
-  });
-
-  test("une adresse inconnue reçoit exactement la même réponse", async ({ page }) => {
-    await page.goto('mot-de-passe-oublie');
-    await page.getByLabel('Votre adresse e-mail').fill(adresseUnique('jamais-inscrit'));
-    await page.getByRole('button', { name: 'Recevoir un lien' }).click();
-    // Mot pour mot le message d'un compte existant : le formulaire ne dit pas
-    // qui est inscrit.
-    await expect(page.getByText('Si un compte existe pour cette adresse')).toBeVisible();
   });
 });
 

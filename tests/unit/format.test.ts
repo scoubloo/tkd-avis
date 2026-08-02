@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
   accord,
   dureeLisible,
-  auteurPublic,
   heureLisible,
   moyenne,
   nomDuJour,
@@ -67,11 +66,3 @@ describe('affichage', () => {
   });
 });
 
-describe('auteur public', () => {
-  it("n'expose aucune adresse e-mail", () => {
-    // Le test tient en une ligne parce que la fonction ne prend plus l'adresse
-    // en paramètre : il n'y a plus rien à masquer, donc plus rien à rater.
-    expect(auteurPublic()).toBe('Membre');
-    expect(auteurPublic()).not.toContain('@');
-  });
-});
