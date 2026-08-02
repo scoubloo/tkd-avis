@@ -10,6 +10,29 @@ Un back-office permet de suivre les utilisateurs et les cours.
 > e-mail en `@exemple.fr` appartiennent à un domaine réservé par la RFC 2606 :
 > aucun message ne peut partir vers une vraie personne.
 
+## Ce dépôt est une extraction, et deux choses y ont été caviardées
+
+Le projet a d'abord vécu dans un dépôt privé plus large. Il en a été extrait avec
+`git subtree split`, ce qui conserve **les neuf commits réels** et leurs messages.
+
+Avant publication, deux chaînes ont été remplacées dans l'ensemble de
+l'historique — c'est écrit ici plutôt que passé sous silence :
+
+- **l'adresse SSH du serveur de déploiement**, `utilisateur@adresse`, dans
+  `deploy.sh` et `tests/e2e/lancer.sh`. Les deux scripts lisent maintenant la
+  variable d'environnement `VPS_HOTE` et refusent de partir si elle est absente.
+  À noter : le nom d'hôte public du site, lui, est resté — il résout vers cette
+  même machine. Ce que le caviardage retire, c'est le panneau « connectez-vous
+  ici en root », pas l'existence du serveur ;
+- **l'adresse e-mail du compte administrateur** de l'instance en ligne, qui
+  figurait dans le dossier de recette.
+
+Rien d'autre n'a été touché. L'adresse de contact des mentions légales est
+restée : elle est obligatoire et déjà affichée sur le site.
+
+Deux scanners passés sur les neuf commits, pas seulement sur l'état final :
+`gitleaks detect` et le scanner maison du dépôt d'origine. Aucun secret trouvé.
+
 ---
 
 ## Ce que fait l'application
