@@ -21,12 +21,19 @@ const global = globalThis as unknown as { __tkdMail?: Transporter };
  * test ne peut donc PAS reconstruire le lien depuis la base — c'est la
  * contrepartie normale d'un stockage correct. Il faut donc lire le message.
  *
- * ⚠️ Double verrou : il faut `SMTP_HOST=capture` **et** un environnement qui
- * n'est pas la production. Même mal configuré, un serveur de production ne peut
- * pas basculer silencieusement dans un mode où les e-mails ne partent plus.
+ * ⚠️ Double verrou : il faut `SMTP_HOST=capture` **ET** `MODE_TEST=1`. Deux
+ * interrupteurs indépendants, dont AUCUN n'existe dans la configuration de
+ * production : un serveur réel ne peut pas basculer silencieusement dans un
+ * mode où les e-mails ne partent plus.
+ *
+ * Le verrou s'appuyait d'abord sur `NODE_ENV !== 'production'`. C'était une
+ * erreur de conception : elle interdisait de faire tourner les tests contre une
+ * VRAIE construction de production — donc de tester ce qu'on livre réellement.
+ * Et ça se paie : en mode développement, `redirect('/')` d'une action serveur
+ * perd le sous-chemin, ce qu'on ne voit jamais en production.
  */
 function captureActive(): boolean {
-  return env().SMTP_HOST === 'capture' && process.env.NODE_ENV !== 'production';
+  return env().SMTP_HOST === 'capture' && process.env.MODE_TEST === '1';
 }
 
 function transporteur(): Transporter {

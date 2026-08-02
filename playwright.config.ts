@@ -16,7 +16,12 @@ export default defineConfig({
   timeout: 45_000,
   reporter: [['list']],
   use: {
-    baseURL: 'http://127.0.0.1:3210/tkd-avis',
+    // ⚠️ La barre finale est INDISPENSABLE, et les chemins des tests ne doivent
+    // PAS commencer par « / ». Playwright résout une adresse absolue contre
+    // l'ORIGINE : « /inscription » donnait « http://127.0.0.1:3210/inscription »,
+    // sans le sous-chemin — donc 404 partout, et des tests qui accusaient
+    // l'application d'un défaut qui était le leur.
+    baseURL: 'http://127.0.0.1:3210/tkd-avis/',
     trace: 'retain-on-failure',
     locale: 'fr-FR',
     timezoneId: 'Europe/Paris',

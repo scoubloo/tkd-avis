@@ -2,12 +2,12 @@ import { expect, test } from '@playwright/test';
 import { sansDebordementHorizontal } from './aide';
 
 const PAGES_PUBLIQUES = [
-  '/',
-  '/cours/poomsae-vendredi',
-  '/inscription',
-  '/connexion',
-  '/mentions-legales',
-  '/confidentialite',
+  '',
+  'cours/poomsae-vendredi',
+  'inscription',
+  'connexion',
+  'mentions-legales',
+  'confidentialite',
 ];
 
 test.describe('affichage', () => {
@@ -25,7 +25,7 @@ test.describe('affichage', () => {
   }
 
   test('les champs de saisie font au moins 16 px (sinon iOS zoome tout seul)', async ({ page }) => {
-    await page.goto('/inscription');
+    await page.goto('inscription');
     for (const selecteur of ['#email', '#motDePasse']) {
       const taille = await page.locator(selecteur).evaluate((e) =>
         parseFloat(getComputedStyle(e).fontSize),
@@ -34,18 +34,19 @@ test.describe('affichage', () => {
     }
   });
 
-  test('le formulaire est utilisable entièrement au clavier', async ({ page }) => {
-    await page.goto('/connexion');
+  test('le formulaire se remplit et se valide au clavier seul', async ({ page }) => {
+    await page.goto('connexion');
 
+    // ⚠️ On ne teste PAS l'ordre exact de tabulation : Safari, par défaut, ne
+    // met pas les boutons dans le parcours de tabulation. Ce qui doit être vrai
+    // partout, c'est qu'on peut remplir le formulaire et le valider sans souris.
     await page.getByLabel('Adresse e-mail').focus();
     await page.keyboard.type('clavier@exemple.fr');
     await page.keyboard.press('Tab');
     await page.keyboard.type('un-mot-de-passe');
-    await page.keyboard.press('Tab');
+    await page.keyboard.press('Enter'); // validation implicite
 
-    // Le bouton d'envoi doit être l'élément suivant dans l'ordre de tabulation.
-    const actif = await page.evaluate(() => document.activeElement?.textContent?.trim());
-    expect(actif).toBe('Se connecter');
+    await expect(page.getByRole('alert')).toBeVisible();
   });
 
   test('chaque page a un titre unique et une langue déclarée', async ({ page }) => {
@@ -61,7 +62,7 @@ test.describe('affichage', () => {
   });
 
   test('une page inexistante répond 404 avec un écran lisible', async ({ page }) => {
-    const reponse = await page.goto('/cette-page-nexiste-pas');
+    const reponse = await page.goto('cette-page-nexiste-pas');
     expect(reponse?.status()).toBe(404);
     await expect(page.getByRole('heading', { name: 'Page introuvable' })).toBeVisible();
   });

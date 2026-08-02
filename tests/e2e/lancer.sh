@@ -27,7 +27,12 @@ nettoyer() {
 trap nettoyer EXIT
 
 echo "▸ Base de test (distincte de la production)"
-ssh -i "$CLE" "$VPS" "docker exec tkd-avis-db psql -U tkd -d postgres -q -c 'DROP DATABASE IF EXISTS tkd_avis_test' \
+# ⚠️ Les connexions d'un run précédent empêchent le DROP (« is being accessed by
+# other users ») et faisaient échouer le script avant même de commencer. On
+# ferme donc explicitement les sessions restantes avant de recréer la base.
+ssh -i "$CLE" "$VPS" "docker exec tkd-avis-db psql -U tkd -d postgres -q -c \
+    \"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='tkd_avis_test' AND pid <> pg_backend_pid()\" >/dev/null 2>&1
+  docker exec tkd-avis-db psql -U tkd -d postgres -q -c 'DROP DATABASE IF EXISTS tkd_avis_test' \
   && docker exec tkd-avis-db psql -U tkd -d postgres -q -c 'CREATE DATABASE tkd_avis_test'" >/dev/null
 
 echo "▸ Tunnel SSH vers la base"
@@ -44,7 +49,7 @@ export SMTP_PORT="587"
 export SMTP_USER="capture"
 export SMTP_PASSWORD="capture"
 export SMTP_FROM="Avis TKD (test) <test@exemple.fr>"
-export NODE_ENV="test"
+export MODE_TEST="1"
 
 echo "▸ Migrations et catalogue"
 node scripts/migrate.mjs
@@ -52,8 +57,22 @@ node scripts/seed.mjs
 
 : > "$CAPTURE_MAIL_FICHIER"
 
-echo "▸ Démarrage de l'application en local"
-npx next dev -p 3210 >/tmp/tkd-avis-serveur.log 2>&1 &
+# ⚠️ On construit et on sert en PRODUCTION, jamais en mode développement.
+# Le serveur de développement se comporte différemment sur au moins un point qui
+# compte : `redirect()` d'une action serveur y perd le sous-chemin. Tester le
+# serveur de développement, c'est tester un artefact qui ne sera jamais livré.
+echo "▸ Construction de production"
+npx next build >/tmp/tkd-avis-build.log 2>&1 || { echo "✖ construction échouée"; tail -20 /tmp/tkd-avis-build.log; exit 1; }
+
+# La sortie « standalone » ne contient QUE le serveur : les fichiers statiques
+# et le dossier public doivent être posés à côté, sinon la page répond 200 et
+# s'affiche sans aucun style — le défaut exact que le script de déploiement
+# contrôle en production.
+cp -R .next/static .next/standalone/.next/static
+cp -R public .next/standalone/public 2>/dev/null || true
+
+echo "▸ Démarrage de l'application (construction de production)"
+PORT=3210 node .next/standalone/server.js >/tmp/tkd-avis-serveur.log 2>&1 &
 PID_APP=$!
 
 for _ in $(seq 1 40); do

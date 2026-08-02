@@ -1,5 +1,6 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import type { Page } from '@playwright/test';
+import postgres from 'postgres';
 
 const FICHIER_MAILS = process.env.CAPTURE_MAIL_FICHIER ?? '/tmp/tkd-avis-mails.jsonl';
 
@@ -12,6 +13,27 @@ export const MOT_DE_PASSE = 'une-phrase-de-passe-solide';
 
 export async function viderBoite(): Promise<void> {
   await writeFile(FICHIER_MAILS, '');
+}
+
+/**
+ * Remet à zéro les compteurs anti-abus de la base de TEST.
+ *
+ * Sans ça, la suite échoue à partir du quatrième compte créé — et c'est la
+ * limitation de débit qui fait CORRECTEMENT son travail (3 inscriptions par
+ * heure et par appareil), pas l'application qui casse. Les tests venant tous de
+ * 127.0.0.1, ils se partagent un unique compteur.
+ *
+ * Le test qui vérifie la limitation, lui, l'épuise volontairement.
+ */
+export async function viderCompteurs(): Promise<void> {
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error('DATABASE_URL absente : lancer les tests via tests/e2e/lancer.sh');
+  const sql = postgres(url, { max: 1, onnotice: () => {} });
+  try {
+    await sql`DELETE FROM rate_limits`;
+  } finally {
+    await sql.end({ timeout: 5 });
+  }
 }
 
 type Message = { destinataire: string; sujet: string; texte: string };
@@ -45,7 +67,7 @@ export function lienDeConfirmation(message: Message): string {
 
 /** Inscription complète : création, confirmation par le lien reçu, connexion. */
 export async function creerCompteConfirme(page: Page, email: string): Promise<void> {
-  await page.goto('/inscription');
+  await page.goto('inscription');
   await page.getByLabel('Adresse e-mail').fill(email);
   await page.getByLabel('Mot de passe').fill(MOT_DE_PASSE);
   await page.getByRole('button', { name: 'Créer mon compte' }).click();
@@ -59,7 +81,7 @@ export async function creerCompteConfirme(page: Page, email: string): Promise<vo
 }
 
 export async function connecter(page: Page, email: string): Promise<void> {
-  await page.goto('/connexion');
+  await page.goto('connexion');
   await page.getByLabel('Adresse e-mail').fill(email);
   await page.getByLabel('Mot de passe').fill(MOT_DE_PASSE);
   await page.getByRole('button', { name: 'Se connecter' }).click();

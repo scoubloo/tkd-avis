@@ -1,5 +1,11 @@
 import { expect, test } from '@playwright/test';
-import { adresseUnique, creerCompteConfirme, MOT_DE_PASSE, viderBoite } from './aide';
+import {
+  adresseUnique,
+  creerCompteConfirme,
+  MOT_DE_PASSE,
+  viderBoite,
+  viderCompteurs,
+} from './aide';
 
 /**
  * Ce qu'un examinateur essaie en premier. Chaque test correspond à une ligne du
@@ -7,9 +13,10 @@ import { adresseUnique, creerCompteConfirme, MOT_DE_PASSE, viderBoite } from './
  */
 test.describe('ce qu\'un curieux va essayer', () => {
   test.beforeAll(viderBoite);
+  test.beforeEach(viderCompteurs);
 
   test('un visiteur non connecté ne voit pas exister le back-office', async ({ page }) => {
-    for (const chemin of ['/admin', '/admin/utilisateurs', '/admin/cours', '/admin/cours/combat-jeudi']) {
+    for (const chemin of ['admin', 'admin/utilisateurs', 'admin/cours', 'admin/cours/combat-jeudi']) {
       const reponse = await page.goto(chemin);
       // 404 et non 403 : répondre « interdit » confirmerait que la page existe.
       expect(reponse?.status(), `${chemin} doit répondre 404`).toBe(404);
@@ -23,7 +30,7 @@ test.describe('ce qu\'un curieux va essayer', () => {
     await expect(page.getByRole('link', { name: 'Administration' })).toHaveCount(0);
 
     // …et l'URL tapée à la main ne donne rien non plus.
-    const reponse = await page.goto('/admin/utilisateurs');
+    const reponse = await page.goto('admin/utilisateurs');
     expect(reponse?.status()).toBe(404);
   });
 
@@ -32,9 +39,14 @@ test.describe('ce qu\'un curieux va essayer', () => {
     await creerCompteConfirme(page, email);
 
     // Déconnexion, puis nouvelle inscription avec la MÊME adresse.
-    await page.goto('/');
+    await page.goto('');
     await page.getByRole('button', { name: 'Se déconnecter' }).click();
-    await page.goto('/inscription');
+    // ⚠️ Attendre que la déconnexion ait ABOUTI. Sans cette attente, la
+    // navigation suivante partait encore connectée — et `/inscription` renvoie
+    // alors vers l'accueil, où il n'y a aucun champ à remplir. Le test expirait
+    // en accusant l'application.
+    await page.getByRole('link', { name: 'Créer un compte' }).waitFor();
+    await page.goto('inscription');
     await page.getByLabel('Adresse e-mail').fill(email);
     await page.getByLabel('Mot de passe').fill('un-autre-mot-de-passe');
     await page.getByRole('button', { name: 'Créer mon compte' }).click();
@@ -47,7 +59,7 @@ test.describe('ce qu\'un curieux va essayer', () => {
   test('la connexion ne distingue pas « compte inconnu » de « mot de passe faux »', async ({ page }) => {
     const email = adresseUnique('inconnu');
 
-    await page.goto('/connexion');
+    await page.goto('connexion');
     await page.getByLabel('Adresse e-mail').fill(email);
     await page.getByLabel('Mot de passe').fill(MOT_DE_PASSE);
     await page.getByRole('button', { name: 'Se connecter' }).click();
@@ -58,7 +70,7 @@ test.describe('ce qu\'un curieux va essayer', () => {
     page,
   }) => {
     await creerCompteConfirme(page, adresseUnique('note'));
-    await page.goto('/cours/ados-mardi');
+    await page.goto('cours/ados-mardi');
 
     // On force une valeur impossible directement dans le formulaire, comme le
     // ferait quelqu'un avec les outils de développement.
@@ -89,7 +101,7 @@ test.describe('ce qu\'un curieux va essayer', () => {
     const email = adresseUnique('bourrinage');
 
     for (let essai = 1; essai <= 6; essai += 1) {
-      await page.goto('/connexion');
+      await page.goto('connexion');
       await page.getByLabel('Adresse e-mail').fill(email);
       await page.getByLabel('Mot de passe').fill(`tentative-numero-${essai}`);
       await page.getByRole('button', { name: 'Se connecter' }).click();
@@ -102,7 +114,7 @@ test.describe('ce qu\'un curieux va essayer', () => {
   });
 
   test('les en-têtes de sécurité sont bien envoyés', async ({ page }) => {
-    const reponse = await page.goto('/');
+    const reponse = await page.goto('');
     const entetes = reponse!.headers();
     expect(entetes['x-content-type-options']).toBe('nosniff');
     expect(entetes['x-frame-options']).toBe('DENY');

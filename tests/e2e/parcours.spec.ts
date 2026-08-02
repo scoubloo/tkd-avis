@@ -7,16 +7,18 @@ import {
   lienDeConfirmation,
   MOT_DE_PASSE,
   viderBoite,
+  viderCompteurs,
 } from './aide';
 
 test.describe('parcours complet', () => {
   test.beforeAll(viderBoite);
+  test.beforeEach(viderCompteurs);
 
   test("de l'inscription au dépôt d'un avis", async ({ page }) => {
     const email = adresseUnique('parcours');
 
     // --- Inscription ---
-    await page.goto('/inscription');
+    await page.goto('inscription');
     await page.getByLabel('Adresse e-mail').fill(email);
     await page.getByLabel('Mot de passe').fill(MOT_DE_PASSE);
     await page.getByRole('button', { name: 'Créer mon compte' }).click();
@@ -43,17 +45,20 @@ test.describe('parcours complet', () => {
     await connecter(page, email);
 
     // --- Dépôt d'un avis ---
-    await page.goto('/cours/baby-tkd-mercredi');
+    await page.goto('cours/baby-tkd-mercredi');
     await page.getByRole('radio', { name: '5 sur 5' }).check();
+    // `#commentaire` et non getByLabel('Votre avis') : ce libellé désigne AUSSI
+    // le titre de la section, et Playwright refuse (à juste titre) un sélecteur
+    // qui vise deux éléments.
     await page
-      .getByLabel('Votre avis')
+      .locator('#commentaire')
       .fill("Ma fille de cinq ans y va depuis la rentrée et elle en parle toute la semaine.");
     await page.getByRole('button', { name: 'Publier mon avis' }).click();
     await expect(page.getByText('Votre avis est enregistré')).toBeVisible();
 
     // --- Il est visible publiquement, et la moyenne le reflète ---
-    await expect(page.getByText('5,0')).toBeVisible();
-    await expect(page.getByText('votre avis')).toBeVisible();
+    await expect(page.locator('.note__valeur').first()).toHaveText('5,0');
+    await expect(page.locator('.etiquette', { hasText: 'votre avis' })).toBeVisible();
 
     // --- Modification : un seul avis, pas un second ---
     await page.getByRole('radio', { name: '3 sur 5' }).check();
@@ -70,9 +75,9 @@ test.describe('parcours complet', () => {
     const email = adresseUnique('rgpd');
     await creerCompteConfirme(page, email);
 
-    await page.goto('/cours/renforcement-samedi');
+    await page.goto('cours/renforcement-samedi');
     await page.getByRole('radio', { name: '4 sur 5' }).check();
-    await page.getByLabel('Votre avis').fill('Bon complément, bien dosé, on sort détendu.');
+    await page.locator('#commentaire').fill('Bon complément, bien dosé, on sort détendu.');
     await page.getByRole('button', { name: 'Publier mon avis' }).click();
     await expect(page.getByText('Votre avis est enregistré')).toBeVisible();
 
@@ -85,7 +90,7 @@ test.describe('parcours complet', () => {
     expect(JSON.stringify(donnees)).not.toContain(MOT_DE_PASSE);
 
     // Droit à l'effacement.
-    await page.goto('/mon-compte');
+    await page.goto('mon-compte');
     await page.getByRole('button', { name: 'Supprimer mon compte' }).click();
     await page.getByLabel('Écrivez SUPPRIMER pour confirmer').fill('SUPPRIMER');
     await page.getByRole('button', { name: 'Supprimer définitivement' }).click();
@@ -99,7 +104,7 @@ test.describe('parcours complet', () => {
 
 /** Connexion sans attendre la réussite — pour tester les refus. */
 async function connecterSansAttendre(page: import('@playwright/test').Page, email: string) {
-  await page.goto('/connexion');
+  await page.goto('connexion');
   await page.getByLabel('Adresse e-mail').fill(email);
   await page.getByLabel('Mot de passe').fill(MOT_DE_PASSE);
   await page.getByRole('button', { name: 'Se connecter' }).click();
