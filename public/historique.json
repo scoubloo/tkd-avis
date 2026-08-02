@@ -1,7 +1,12 @@
 {
-  "genere_le": "02/08/2026 à 10:35",
-  "commit": "cf06bb2",
+  "genere_le": "02/08/2026 à 10:49",
+  "commit": "bc0e19c",
   "commits": [
+    {
+      "empreinte": "bc0e19c",
+      "date": "02/08/2026 10:37",
+      "titre": "Avis TKD : mot de passe oublié, coulisses vérifiables, et 3 défauts signalés par Liam"
+    },
     {
       "empreinte": "cf06bb2",
       "date": "02/08/2026 03:11",

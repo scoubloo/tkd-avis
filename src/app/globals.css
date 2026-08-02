@@ -22,7 +22,10 @@
   --succes-fond: #ecf6f0;
   --alerte: #9a2b25;        /* 7,1:1 sur blanc */
   --alerte-fond: #fdf0ef;
-  --etoile: #b8860b;
+  /* 5,32:1 sur blanc. L'ancien #b8860b était à 3,25 — trouvé par le gate de
+     livraison, et INVISIBLE pour la suite de tests : celle-ci tourne sur une
+     base vide, où aucun cours n'a de note, donc aucune étoile ne s'affiche. */
+  --etoile: #8a6508;
 
   --rayon: 10px;
   --rayon-petit: 6px;

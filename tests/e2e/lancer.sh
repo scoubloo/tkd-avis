@@ -51,9 +51,15 @@ export SMTP_PASSWORD="capture"
 export SMTP_FROM="Avis TKD (test) <test@exemple.fr>"
 export MODE_TEST="1"
 
-echo "▸ Migrations et catalogue"
+echo "▸ Migrations, catalogue et jeu de démonstration"
 node scripts/migrate.mjs
 node scripts/seed.mjs
+# ⚠️ Le jeu de démonstration est INDISPENSABLE, pas décoratif : sans lui, aucun
+# cours n'a de note, donc aucune étoile ne s'affiche, donc des pans entiers de
+# l'interface ne sont jamais rendus pendant les tests. C'est exactement ainsi
+# qu'un contraste à 3,25:1 sur les étoiles a survécu à 42 tests au vert et n'a
+# été trouvé qu'en production, par le gate de livraison.
+MDP_DEMO=mot-de-passe-de-test node scripts/donnees-demo.mjs >/dev/null
 
 : > "$CAPTURE_MAIL_FICHIER"
 
