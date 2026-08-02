@@ -88,6 +88,59 @@ test.describe('affichage', () => {
     }
   });
 
+  test('tout le texte affiché atteint le contraste minimal exigé (WCAG AA)', async ({ page }) => {
+    // Défaut réel du 02/08/2026 : le bouton « Créer un compte » de l'en-tête
+    // héritait de la couleur des liens de navigation — gris foncé sur bleu
+    // marine, 1,6:1. Invisible dans une relecture de code, évident à l'œil.
+    for (const chemin of ['', 'inscription', 'connexion', 'cours/poomsae-vendredi']) {
+      await page.goto(chemin);
+
+      const fautifs = await page.evaluate(() => {
+        const luminance = (couleur: string): number => {
+          const [r, v, b] = (couleur.match(/\d+(\.\d+)?/g) ?? ['0', '0', '0']).map(Number) as [
+            number,
+            number,
+            number,
+          ];
+          const canal = (c: number) => {
+            const x = c / 255;
+            return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4;
+          };
+          return 0.2126 * canal(r) + 0.7152 * canal(v) + 0.0722 * canal(b);
+        };
+
+        const fondEffectif = (el: Element): string => {
+          let noeud: Element | null = el;
+          while (noeud) {
+            const fond = getComputedStyle(noeud).backgroundColor;
+            if (fond && !fond.startsWith('rgba(0, 0, 0, 0)')) return fond;
+            noeud = noeud.parentElement;
+          }
+          return 'rgb(255, 255, 255)';
+        };
+
+        const problemes: { texte: string; rapport: number }[] = [];
+        for (const el of document.querySelectorAll('a, button, p, h1, h2, h3, td, th, label, span')) {
+          const texte = (el.textContent ?? '').trim();
+          if (!texte || el.children.length > 0) continue;
+          const style = getComputedStyle(el);
+          if (style.visibility === 'hidden' || style.display === 'none') continue;
+          const taille = parseFloat(style.fontSize);
+          const gras = parseInt(style.fontWeight, 10) >= 700;
+          const seuil = taille >= 24 || (taille >= 18.66 && gras) ? 3 : 4.5;
+
+          const l1 = luminance(style.color);
+          const l2 = luminance(fondEffectif(el));
+          const rapport = (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+          if (rapport < seuil) problemes.push({ texte: texte.slice(0, 40), rapport: Math.round(rapport * 100) / 100 });
+        }
+        return problemes;
+      });
+
+      expect(fautifs, `contraste insuffisant sur « ${chemin || 'accueil'} »`).toEqual([]);
+    }
+  });
+
   test('une page inexistante répond 404 avec un écran lisible', async ({ page }) => {
     const reponse = await page.goto('cette-page-nexiste-pas');
     expect(reponse?.status()).toBe(404);

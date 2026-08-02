@@ -20,3 +20,4 @@ test-results/
 playwright-report/
 blob-report/
 coverage/
+tests/e2e/dernier-resultat.json

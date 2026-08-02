@@ -40,6 +40,18 @@ export const connexionSchema = z.object({
   motDePasse: z.string().min(1, 'Indiquez votre mot de passe.').max(200),
 });
 
+/**
+ * Schéma du formulaire de réinitialisation.
+ *
+ * C'est un OBJET et non un simple `motDePasseSchema` : validé seul, une chaîne
+ * produit une erreur dont le chemin est vide — le message n'aurait donc pu être
+ * rattaché à aucun champ, et l'utilisateur aurait vu un formulaire refusé sans
+ * la moindre explication.
+ */
+export const reinitialisationSchema = z.object({
+  motDePasse: motDePasseSchema,
+});
+
 export const avisSchema = z.object({
   coursId: z.string().uuid('Cours inconnu.'),
   note: z.coerce

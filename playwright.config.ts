@@ -14,7 +14,7 @@ export default defineConfig({
   workers: 1,
   retries: 0,
   timeout: 45_000,
-  reporter: [['list']],
+  reporter: [['list'], ['json', { outputFile: 'tests/e2e/dernier-resultat.json' }]],
   use: {
     // ⚠️ La barre finale est INDISPENSABLE, et les chemins des tests ne doivent
     // PAS commencer par « / ». Playwright résout une adresse absolue contre

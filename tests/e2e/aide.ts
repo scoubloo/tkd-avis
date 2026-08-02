@@ -59,6 +59,12 @@ export async function attendreMail(destinataire: string, delaiMs = 15_000): Prom
   throw new Error(`Aucun e-mail reçu pour ${destinataire} en ${delaiMs} ms.`);
 }
 
+export function lienDeReinitialisation(message: Message): string {
+  const trouve = message.texte.match(/https?:\/\/\S+\/reinitialisation\/\S+/);
+  if (!trouve) throw new Error(`Pas de lien de réinitialisation dans :\n${message.texte}`);
+  return trouve[0];
+}
+
 export function lienDeConfirmation(message: Message): string {
   const trouve = message.texte.match(/https?:\/\/\S+\/confirmation\/\S+/);
   if (!trouve) throw new Error(`Pas de lien de confirmation dans :\n${message.texte}`);

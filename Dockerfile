@@ -45,6 +45,23 @@ COPY --from=build --chown=node:node /app/public ./public
 COPY --from=build --chown=node:node /app/scripts ./scripts
 COPY --from=build --chown=node:node /app/db ./db
 
+# Sources embarquées, en LECTURE SEULE, pour la section « coulisses ».
+# Ce n'est pas un réflexe anodin — c'est de la surface d'attaque en plus — et
+# c'est assumé : cette application est un exercice destiné à être vérifié, le
+# code ne contient aucun secret (ils vivent tous dans l'environnement), et
+# l'affichage passe par une liste blanche d'extensions avec garde anti-traversée.
+COPY --from=build --chown=node:node /app/src ./source/src
+COPY --from=build --chown=node:node /app/db ./source/db
+COPY --from=build --chown=node:node /app/scripts ./source/scripts
+COPY --from=build --chown=node:node /app/tests ./source/tests
+# ⚠️ `deploy.sh` est volontairement ABSENT de cette liste : il nomme l'adresse
+# du serveur et le chemin de la clé SSH sur la machine de développement. Rien de
+# secret en soi, mais aucune raison de l'offrir. Le Dockerfile et le fichier
+# compose, eux, sont publiés : ils montrent le durcissement, et c'est le sujet.
+COPY --from=build --chown=node:node /app/Dockerfile /app/docker-compose.yml \
+     /app/package.json /app/next.config.ts /app/tsconfig.json /app/playwright.config.ts \
+     /app/vitest.config.ts /app/README.md /app/DOSSIER_DE_RECETTE.md /app/.env.example ./source/
+
 # ⚠️ Le pilote PostgreSQL est copié explicitement.
 # Next.js EMPAQUETTE `postgres` et `drizzle-orm` dans ses fragments serveur : ils
 # n'apparaissent donc pas dans le node_modules de la sortie standalone. Le

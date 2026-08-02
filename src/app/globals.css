@@ -11,7 +11,7 @@
 :root {
   --encre: #16181d;
   --encre-douce: #4a5058;
-  --encre-tres-douce: #6b7280;
+  --encre-tres-douce: #646b78;  /* 4,96:1 sur le fond — l'ancien #6b7280 était à 4,47, sous le seuil */
   --fond: #f7f6f3;
   --surface: #ffffff;
   --bord: #e2e0da;
@@ -81,6 +81,16 @@ a:hover { color: var(--primaire-clair); }
 .nav { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; font-size: .93rem; }
 .nav a { color: var(--encre-douce); text-decoration: none; }
 .nav a:hover, .nav a[aria-current='page'] { color: var(--primaire); text-decoration: underline; }
+
+/* ⚠️ `.nav a` (classe + élément) est PLUS SPÉCIFIQUE que `.bouton` (classe
+   seule) : sans les trois règles ci-dessous, un bouton placé dans la navigation
+   héritait de la couleur de texte des liens — gris foncé sur fond bleu marine,
+   soit un rapport de contraste de 1,6:1, illisible. Signalé par Liam le
+   02/08/2026 ; ni mes tests ni ma relecture ne l'avaient vu, parce qu'aucun des
+   deux ne mesurait un contraste. Un test le fait désormais. */
+.nav a.bouton { color: #fff; text-decoration: none; }
+.nav a.bouton:hover { color: #fff; text-decoration: none; }
+.nav a.bouton--secondaire, .nav a.bouton--secondaire:hover { color: var(--primaire); }
 
 main { padding: 2rem 0 4rem; }
 

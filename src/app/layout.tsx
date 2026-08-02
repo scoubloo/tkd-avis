@@ -83,6 +83,11 @@ export default async function RacineLayout({ children }: { children: React.React
               <li>
                 <Link href="/confidentialite">Données personnelles</Link>
               </li>
+              <li>
+                <Link href="/coulisses">
+                  <strong>Coulisses</strong> — le code, la base, les preuves
+                </Link>
+              </li>
             </ul>
             <p style={{ margin: 0 }}>
               Application de démonstration. Les cours et les professeurs présentés sont fictifs.

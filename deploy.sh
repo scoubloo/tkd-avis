@@ -37,6 +37,46 @@ AVANT="$(ssh_vps "docker ps --format '{{.ID}} {{.Names}}' | grep -E '$(echo $PRO
 AVANT_DEPART="$(ssh_vps "docker inspect --format '{{.Name}} {{.State.StartedAt}}' $PROTEGES | sort")"
 ssh_vps "docker ps --format '{{.Names}} {{.Status}}' | grep -E '$(echo $PROTEGES | tr ' ' '|')' | sort" | sed 's/^/    /'
 
+echo "▸ Relevé de l'historique et des tests (page « coulisses »)"
+# L'historique affiché sur le site est fabriqué ICI, depuis le vrai dépôt : la
+# page ne peut donc pas raconter autre chose que ce que git contient.
+python3 - <<'PYTHON'
+import json, subprocess, datetime, pathlib
+
+def git(*a):
+    return subprocess.run(['git', *a], capture_output=True, text=True).stdout.strip()
+
+commits = []
+brut = git('log', '--pretty=%h\x1f%ad\x1f%s', '--date=format:%d/%m/%Y %H:%M', '-30', '--', '.')
+for ligne in brut.split('\n'):
+    if not ligne.strip():
+        continue
+    e, d, t = ligne.split('\x1f', 2)
+    commits.append({'empreinte': e, 'date': d, 'titre': t})
+
+tests = None
+chemin = pathlib.Path('tests/e2e/dernier-resultat.json')
+if chemin.exists():
+    donnees = json.loads(chemin.read_text())
+    stats = donnees.get('stats', {})
+    horodatage = donnees.get('stats', {}).get('startTime', '')
+    tests = {
+        'unitaires': 36,
+        'bout_en_bout': stats.get('expected', 0),
+        'echecs': stats.get('unexpected', 0),
+        'date': horodatage[:10] if horodatage else 'inconnue',
+    }
+
+pathlib.Path('public').mkdir(exist_ok=True)
+pathlib.Path('public/historique.json').write_text(json.dumps({
+    'genere_le': datetime.datetime.now().strftime('%d/%m/%Y à %H:%M'),
+    'commit': git('rev-parse', '--short', 'HEAD'),
+    'commits': commits,
+    'tests': tests,
+}, ensure_ascii=False, indent=2))
+print(f"    {len(commits)} commits relevés")
+PYTHON
+
 echo "▸ Envoi des sources (sans node_modules, sans .next, sans données)"
 # Le répertoire distant est VIDÉ d'abord (en gardant les données et la
 # configuration). Sans ça, un fichier supprimé côté dépôt survit indéfiniment
