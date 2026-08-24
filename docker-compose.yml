@@ -8,7 +8,19 @@
 
 services:
   tkd-avis-db:
-    image: postgres:16-alpine
+    # ⚠️ Empreinte, pas étiquette : « 16-alpine » BOUGE. Ce conteneur a été créé
+    # sur 16.13-alpine3.23 ; la même étiquette sert 16.15-alpine3.24 depuis le
+    # 13/08/2026. L'empreinte ci-dessous est CELLE QUI TOURNE aujourd'hui, pas
+    # celle du jour : épingler l'étiquette courante aurait changé le moteur de la
+    # base de production sans que personne ne le demande.
+    # ⚠️ CONSÉQUENCE MESURÉE : écrire une empreinte change la définition du
+    # service, donc le PROCHAIN `docker compose up -d` RECRÉE tkd-avis-db une
+    # fois — avec une image identique, et les données sont dans le montage
+    # ./donnees, donc elles survivent. Règle AETERNA quand même : sauvegarde du
+    # volume vérifiée AVANT, hors heure de pointe. `deploy.sh` n'en fait aucune.
+    # Monter volontairement : relever la nouvelle empreinte avec
+    #   docker buildx imagetools inspect postgres:16-alpine --format '{{.Manifest.Digest}}'
+    image: postgres:16-alpine@sha256:4e6e670bb069649261c9c18031f0aded7bb249a5b6664ddec29c013a89310d50
     container_name: tkd-avis-db
     restart: unless-stopped
     environment:
