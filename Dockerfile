@@ -13,15 +13,16 @@
 # npm différent de celui contre lequel on a testé. Le digest ci-dessous fige
 # exactement l'image, y compris le npm qu'elle contient.
 #
-# Digest relevé au registre le 22/08/2026 (index multi-architecture : il vaut
+# Digest relevé au registre le 23/10/2026 (index multi-architecture : il vaut
 # pour l'amd64 du VPS comme pour l'arm64 du Mac). Il correspond à l'image
-# `22-bookworm-slim` construite le 05/08/2026.
+# `22-bookworm-slim` publiée le 21/10/2026 : Node 22.23.4 (version de sécurité
+# du 20-21/10), Debian 12.15. Ancien digest : d649c27d… (image du 05/08, Node 22.23.2).
 #
 # Pour le faire évoluer, volontairement et en le sachant :
 #   docker buildx imagetools inspect node:22-bookworm-slim --format '{{.Manifest.Digest}}'
 
 # --- 1. Dépendances ----------------------------------------------------------
-FROM node:22-bookworm-slim@sha256:d649c27dae7ba0137b3cef5dd75baa422c08dc3d9e3fc0c23dfb172dc3cc6436 AS deps
+FROM node:22-bookworm-slim@sha256:de170b39439eb0e5a3444ad7d60b015614a381e10fecae2e30ec9e735122f38d AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 # `npm ci` installe EXACTEMENT ce que décrit package-lock.json. `npm install`
@@ -33,7 +34,7 @@ RUN npm ci --no-audit --no-fund --ignore-scripts \
  && npm rebuild esbuild sharp --foreground-scripts
 
 # --- 2. Construction ---------------------------------------------------------
-FROM node:22-bookworm-slim@sha256:d649c27dae7ba0137b3cef5dd75baa422c08dc3d9e3fc0c23dfb172dc3cc6436 AS build
+FROM node:22-bookworm-slim@sha256:de170b39439eb0e5a3444ad7d60b015614a381e10fecae2e30ec9e735122f38d AS build
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=deps /app/node_modules ./node_modules
@@ -41,7 +42,7 @@ COPY . .
 RUN npm run build
 
 # --- 3. Exécution ------------------------------------------------------------
-FROM node:22-bookworm-slim@sha256:d649c27dae7ba0137b3cef5dd75baa422c08dc3d9e3fc0c23dfb172dc3cc6436 AS runner
+FROM node:22-bookworm-slim@sha256:de170b39439eb0e5a3444ad7d60b015614a381e10fecae2e30ec9e735122f38d AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production \
